@@ -175,7 +175,9 @@ class Mob(pg.sprite.Sprite):
                 self.fov = cFOV
                 self.obst3 = list(filter(self.check_dir, list(filter(self.check_dist, self.walls))))
                 if len(self.obst3) == 0:
-
+                    self.rot = self.target_dir
+                    self.vel = vec(0, 0)
+                    shoot(self, 'RED')
                 else:
                     self.move()
             else:
