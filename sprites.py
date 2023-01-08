@@ -190,10 +190,14 @@ class Mob(pg.sprite.Sprite):
         self.vel = self.vel.rotate((-self.rot))
         self.pos += self.vel * self.game.dt
         self.hit_rect.centerx = self.pos.x
-        collide_with_walls(self, self.game.walls, 'x')
+        collisionx = collide_with_walls(self, self.game.walls, 'x')
         self.hit_rect.centery = self.pos.y
-        collide_with_walls(self, self.game.walls, 'y')
+        collisiony = collide_with_walls(self, self.game.walls, 'y')
         self.rect.center = self.hit_rect.center
+
+        if collisionx or collisiony:
+            self.rot += 180
+            self.rot -= (self.rot % 90)
 
         if self.health <= 0:
             self.kill()
@@ -234,6 +238,8 @@ def collide_with_walls(sprite, group, dir):
                 sprite.pos.x = hits[0].rect.right + sprite.hit_rect.width / 2
             sprite.vel.x = 0
             sprite.hit_rect.centerx = sprite.pos.x
+            return True
+
     if dir == 'y':
         hits = pg.sprite.spritecollide(sprite, group, False, collide_hit_rect)
         if hits:
@@ -243,6 +249,8 @@ def collide_with_walls(sprite, group, dir):
                 sprite.pos.y = hits[0].rect.bottom + sprite.hit_rect.height / 2
             sprite.vel.y = 0
             sprite.hit_rect.centery = sprite.pos.y
+            return True
+
 
 
 def intersect(segment1, segment2):
