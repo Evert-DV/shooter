@@ -1,7 +1,6 @@
 from os import path
 from sprites import *
 from tilemap import *
-from pprint import pprint
 
 
 def draw_player_health(surf, x, y, pct):
@@ -41,7 +40,7 @@ class Game:
         img_dir = path.join(game_dir, 'img')
         map_dir = path.join(game_dir, 'maps')
         # Load map
-        self.map = Map(path.join(map_dir, 'Map.txt'))
+        self.map = Map(path.join(map_dir, 'Map2.txt'))
         # Load imgs
         self.player_img = pg.image.load(path.join(img_dir, 'player.png')).convert_alpha()
         self.player_img = pg.transform.scale(self.player_img, (50, 25))
@@ -80,8 +79,6 @@ class Game:
                 distance = vector1.distance_to(vector2)
                 if distance <= TILESIZE:
                     self.wall_pairs.append([vector1 + 2 * [TILESIZE // 2], vector2 + 2*[TILESIZE // 2]])
-
-        pprint(self.wall_pairs)
 
         self.camera = Camera(self.map.width, self.map.height)
         self.run()
@@ -141,22 +138,25 @@ class Game:
             pg.draw.rect(self.screen, DARKGREY, self.camera.apply_rect(self.player.rect), 2)
             pg.draw.rect(self.screen, GREY, self.camera.apply_rect(self.player.hit_rect), 2)
 
+            for i, wall in enumerate(self.walls):
+                offset_pairs = self.camera.apply(wall).center
+                offset_pairs -= vec(1.5 * TILESIZE, TILESIZE // 2)
+                if i == 1:
+                    break
+
             for wall in self.walls:
                 pg.draw.rect(self.screen, GREEN, self.camera.apply_rect(wall.rect), 2)
-                #pg.draw.circle(self.screen, GREEN, self.camera.apply(wall).center, 1, 1)
 
             for mob in self.mobs:
                 pg.draw.rect(self.screen, RED, self.camera.apply_rect(mob.hit_rect), 2)
                 pg.draw.circle(self.screen, BLUE, self.camera.apply(mob).center, DETECT_RADIUS, 2)
 
                 if mob.target_dist.length_squared() < DETECT_RADIUS ** 2:
-                    pg.draw.circle(self.screen, LIGHTBLUE, self.camera.apply(mob).center,
-                                   int(mob.target_dist.length()), 1)
-                    pg.draw.line(self.screen, GREEN, self.camera.apply(mob).center,
+                    pg.draw.line(self.screen, YELLOW, self.camera.apply(mob).center,
                                  self.camera.apply(mob.target).center)
 
             for pair in self.wall_pairs:
-                pg.draw.line(self.screen, GREEN, pair[0], pair[1])
+                pg.draw.line(self.screen, GREEN, pair[0] + offset_pairs, pair[1] + offset_pairs)
 
 
         draw_player_health(self.screen, 10, 10, self.player.health / PLAYER_HEALTH)

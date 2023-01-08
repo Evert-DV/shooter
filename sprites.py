@@ -150,11 +150,11 @@ class Mob(pg.sprite.Sprite):
 
     def move(self):
         self.rot_choice = randrange(0, 100)
-        if 2.5 < self.rot_choice < 97.5:
+        if 1.5 < self.rot_choice < 98.5:
             self.rot += 0
-        elif 2.5 < self.rot_choice:
+        elif 1.5 < self.rot_choice:
             self.rot += 90
-        elif 97.5 > self.rot_choice:
+        elif 98.5 > self.rot_choice:
             self.rot += -90
 
         self.rot -= (self.rot % 90)
