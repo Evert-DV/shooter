@@ -1,6 +1,7 @@
 from os import path
 from sprites import *
 from tilemap import *
+from pprint import pprint
 
 
 def draw_player_health(surf, x, y, pct):
@@ -40,7 +41,7 @@ class Game:
         img_dir = path.join(game_dir, 'img')
         map_dir = path.join(game_dir, 'maps')
         # Load map
-        self.map = Map(path.join(map_dir, 'Map2.txt'))
+        self.map = Map(path.join(map_dir, 'Map.txt'))
         # Load imgs
         self.player_img = pg.image.load(path.join(img_dir, 'player.png')).convert_alpha()
         self.player_img = pg.transform.scale(self.player_img, (50, 25))
@@ -57,6 +58,8 @@ class Game:
         self.bullets = pg.sprite.Group()
         self.mobs = pg.sprite.Group()
         self.wall_pos_vecs = []
+        self.wall_pairs = []
+
         # create map from map_data
         for row, tiles in enumerate(self.map.data):
             for col, tile in enumerate(tiles):
@@ -67,11 +70,19 @@ class Game:
                     self.player = Player(self, col, row)
                 if tile == 'M':
                     self.mob = Mob(self, col, row)
-                if tile == 'B':
-                    self.mob = Mob(self, col, row, 'boss')
         self.draw_rects = False
+
         for mob in self.mobs:
             mob.get_walls()
+
+        for i, vector1 in enumerate(self.wall_pos_vecs):
+            for vector2 in self.wall_pos_vecs[i + 1:]:
+                distance = vector1.distance_to(vector2)
+                if distance <= TILESIZE:
+                    self.wall_pairs.append([vector1 + 2 * [TILESIZE // 2], vector2 + 2*[TILESIZE // 2]])
+
+        pprint(self.wall_pairs)
+
         self.camera = Camera(self.map.width, self.map.height)
         self.run()
 
@@ -125,46 +136,28 @@ class Game:
             if isinstance(sprite, Mob):
                 sprite.draw_health()
             self.screen.blit(sprite.image, self.camera.apply(sprite))
+
         if self.draw_rects:
             pg.draw.rect(self.screen, DARKGREY, self.camera.apply_rect(self.player.rect), 2)
             pg.draw.rect(self.screen, GREY, self.camera.apply_rect(self.player.hit_rect), 2)
+
             for wall in self.walls:
                 pg.draw.rect(self.screen, GREEN, self.camera.apply_rect(wall.rect), 2)
-                pg.draw.circle(self.screen, GREEN, self.camera.apply(wall).center, 1, 1)
+                #pg.draw.circle(self.screen, GREEN, self.camera.apply(wall).center, 1, 1)
+
             for mob in self.mobs:
                 pg.draw.rect(self.screen, RED, self.camera.apply_rect(mob.hit_rect), 2)
-                pg.draw.circle(self.screen, BLUE, self.camera.apply(mob).center, \
-                               DETECT_RADIUS, 2)
-
-                if mob.type == 'boss':
-                    for p in mob.path:
-                        pg.draw.circle(self.screen, LIGHTBLUE, self.camera.apply(mob).center - (mob.pos - p), \
-                                       3, 1)
+                pg.draw.circle(self.screen, BLUE, self.camera.apply(mob).center, DETECT_RADIUS, 2)
 
                 if mob.target_dist.length_squared() < DETECT_RADIUS ** 2:
-                    pg.draw.circle(self.screen, LIGHTBLUE, self.camera.apply(mob).center, \
+                    pg.draw.circle(self.screen, LIGHTBLUE, self.camera.apply(mob).center,
                                    int(mob.target_dist.length()), 1)
-                    pg.draw.line(self.screen, LIGHTBLUE, \
-                                 self.camera.apply(mob).center, \
-                                 self.camera.apply(mob).center + vec(int(mob.target_dist.length()), 0).rotate(
-                                     (-mob.target_dir + FOV)), \
-                                 1)
-                    pg.draw.line(self.screen, LIGHTBLUE, \
-                                 self.camera.apply(mob).center, \
-                                 self.camera.apply(mob).center + vec(int(mob.target_dist.length()), 0).rotate(
-                                     (-mob.target_dir - FOV)), \
-                                 1)
+                    pg.draw.line(self.screen, GREEN, self.camera.apply(mob).center,
+                                 self.camera.apply(mob.target).center)
 
-                    pg.draw.circle(self.screen, YELLOW, self.camera.apply(mob).center, \
-                                   cRAD, 1)
-                    pg.draw.line(self.screen, YELLOW, \
-                                 self.camera.apply(mob).center, \
-                                 self.camera.apply(mob).center + vec(cRAD, 0).rotate((-mob.target_dir + cFOV)), \
-                                 1)
-                    pg.draw.line(self.screen, YELLOW, \
-                                 self.camera.apply(mob).center, \
-                                 self.camera.apply(mob).center + vec(cRAD, 0).rotate((-mob.target_dir - cFOV)), \
-                                 1)
+            for pair in self.wall_pairs:
+                pg.draw.line(self.screen, GREEN, pair[0], pair[1])
+
 
         draw_player_health(self.screen, 10, 10, self.player.health / PLAYER_HEALTH)
         # AFTER drawing
@@ -183,11 +176,11 @@ class Game:
         # game over screen
         if not self.running:
             return
-        self.screen.fill(BGCOLOR)
-        self.draw_text("Game Over", 48, WHITE, WIDTH / 2, HEIGHT / 4)
-        self.draw_text("Press any key to play again", 22, WHITE, WIDTH / 2, HEIGHT * 3 / 4)
-        pg.display.flip()
-        self.wait_for_key()
+            # self.screen.fill(BGCOLOR)
+            # self.draw_text("Game Over", 48, WHITE, WIDTH / 2, HEIGHT / 4)
+            # self.draw_text("Press any key to play again", 22, WHITE, WIDTH / 2, HEIGHT * 3 / 4)
+            # pg.display.flip()
+            # self.wait_for_key()
 
     def wait_for_key(self):
         waiting = True

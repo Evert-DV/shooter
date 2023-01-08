@@ -1,5 +1,5 @@
 from random import randrange
-import numpy as np
+import math
 from tilemap import *
 
 vec = pg.math.Vector2
@@ -80,6 +80,7 @@ class Wall(pg.sprite.Sprite):
         self.pos = vec(x, y) * TILESIZE
         self.rect.x = self.pos.x
         self.rect.y = self.pos.y
+        # self.mask = pg.mask.from_surface(self.image)
 
 
 class Bullet(pg.sprite.Sprite):
@@ -165,25 +166,24 @@ class Mob(pg.sprite.Sprite):
         self.target_dist = self.target.pos - self.pos
 
         if self.target_dist.length_squared() < DETECT_RADIUS ** 2:
-            self.dist_limit = self.target_dist.length_squared()
-            self.fov = FOV
-            self.target_dir = self.target_dist.angle_to(vec(1, 0))
-            self.obst = list(filter(self.check_dist, self.walls))
-            self.obst2 = list(filter(self.check_dir, self.obst))
-            if len(self.obst2) == 0:
-                self.dist_limit = cRAD ** 2
-                self.fov = cFOV
-                self.obst3 = list(filter(self.check_dir, list(filter(self.check_dist, self.walls))))
-                if len(self.obst3) == 0:
-                    self.rot = self.target_dir
-                    self.vel = vec(0, 0)
-                    shoot(self, 'RED')
-                else:
-                    self.move()
+            ray = [self.pos, self.target.pos]
+            blind = False
+            for pair in self.game.wall_pairs:
+                blind = intersect(pair, ray)
+                if blind:
+                    break
+
+            if not blind:
+                self.target_dir = self.target_dist.angle_to(vec(1, 0))
+                self.rot = self.target_dir
+                self.vel = vec(0, 0)
+                shoot(self, 'RED')
+
             else:
                 self.move()
         else:
             self.move()
+
         self.image = pg.transform.rotate(self.game.mob_img, self.rot)
         self.rect = self.image.get_rect()
         self.rect.center = self.pos
@@ -194,6 +194,7 @@ class Mob(pg.sprite.Sprite):
         self.hit_rect.centery = self.pos.y
         collide_with_walls(self, self.game.walls, 'y')
         self.rect.center = self.hit_rect.center
+
         if self.health <= 0:
             self.kill()
 
@@ -242,3 +243,45 @@ def collide_with_walls(sprite, group, dir):
                 sprite.pos.y = hits[0].rect.bottom + sprite.hit_rect.height / 2
             sprite.vel.y = 0
             sprite.hit_rect.centery = sprite.pos.y
+
+
+def intersect(segment1, segment2):
+    start1, end1 = segment1
+    start2, end2 = segment2
+
+    # Calculate the slope and intercept of the first line
+    if end1[0] - start1[0] == 0:
+        slope1 = float('inf')
+        intercept1 = start1[0]
+    else:
+        slope1 = (end1[1] - start1[1]) / (end1[0] - start1[0])
+        intercept1 = start1[1] - slope1 * start1[0]
+
+    # Calculate the slope and intercept of the second line
+    if end2[0] - start2[0] == 0:
+        slope2 = float('inf')
+        intercept2 = start2[0]
+    else:
+        slope2 = (end2[1] - start2[1]) / (end2[0] - start2[0])
+        intercept2 = start2[1] - slope2 * start2[0]
+
+    # Check whether the lines are parallel
+    if slope1 == slope2:
+        return False  # Line segments do not intersect
+
+    # Calculate the point of intersection of the two lines
+    if slope1 == float('inf'):
+        x = intercept1
+        y = slope2 * x + intercept2
+    elif slope2 == float('inf'):
+        x = intercept2
+        y = slope1 * x + intercept1
+    else:
+        x = (intercept2 - intercept1) / (slope1 - slope2)
+        y = slope1 * x + intercept1
+
+    # Check whether the point of intersection is within the range of both line segments
+    return (min(start1[0], end1[0]) <= x <= max(start1[0], end1[0])) and (
+                min(start2[0], end2[0]) <= x <= max(start2[0], end2[0])) and (
+                min(start1[1], end1[1]) <= y <= max(start1[1], end1[1])) and (
+                min(start2[1], end2[1]) <= y <= max(start2[1], end2[1]))
