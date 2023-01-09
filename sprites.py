@@ -6,11 +6,11 @@ vec = pg.math.Vector2
 
 
 class Player(pg.sprite.Sprite):
-
     def __init__(self, game, x, y):
         self.mouse_dir = None
         self.mouse_pos = None
         self.mouse_dist = None
+        self.health = None
 
         self.groups = game.all_sprites
         pg.sprite.Sprite.__init__(self, self.groups)
@@ -20,51 +20,42 @@ class Player(pg.sprite.Sprite):
         self.pos = vec(x, y) * TILESIZE
         self.vel = vec(0, 0)
         self.rot = 0
-        self.hit_rect = pg.Rect(0, 0, 40, 40)
+        self.hit_rect = pg.Rect(0, 0, 25, 25)
         self.hit_rect.center = self.rect.center
         self.last_shot = 0
-        self.health = len(self.game.mobs) * PLAYER_HEALTH
 
     def update(self):
         self.mouse_pos = vec(pg.mouse.get_pos())
         self.mouse_dist = self.mouse_pos - self.game.offset
         self.mouse_dir = self.mouse_dist.angle_to(vec(1, 0))
+
         if self.mouse_dist.length_squared() < 125 ** 2:
             self.rot = self.mouse_dir % 360
             self.vel = vec(0, 0)
         else:
             self.move()
             self.pos += self.vel * self.game.dt
+
         self.image = pg.transform.rotate(self.game.player_img, self.rot)
         self.rect = self.image.get_rect()
         self.rect.center = self.pos
+
         self.hit_rect.centerx = self.pos.x
         collide_with_walls(self, self.game.walls, 'x')
         self.hit_rect.centery = self.pos.y
         collide_with_walls(self, self.game.walls, 'y')
         self.rect.center = self.hit_rect.center
+
         keys = pg.key.get_pressed()
-        if keys[pg.K_SPACE]:
+        left, _, right = pg.mouse.get_pressed()
+        if keys[pg.K_SPACE] or left:
             shoot(self, 'GREEN')
 
     def move(self):
         self.vel = vec(PLAYER_SPEED, 0)
-        if -30 < self.mouse_dir < 30:
-            self.rot = 0
-        elif 30 < self.mouse_dir < 60:
-            self.rot = 45
-        elif 60 < self.mouse_dir < 120:
-            self.rot = 90
-        elif 120 < self.mouse_dir < 150:
-            self.rot = 135
-        elif 150 < self.mouse_dir < 210:
-            self.rot = 180
-        elif -150 < self.mouse_dir < -120:
-            self.rot = -135
-        elif -120 < self.mouse_dir < -60:
-            self.rot = -90
-        elif -60 < self.mouse_dir < -30:
-            self.rot = -45
+
+        self.rot = (self.mouse_dir // 45) * 45
+
         self.vel = self.vel.rotate((-self.rot))
 
 
@@ -107,13 +98,9 @@ class Bullet(pg.sprite.Sprite):
 
 class Mob(pg.sprite.Sprite):
 
-    def __init__(self, game, x, y, mob_type='normal'):
+    def __init__(self, game, x, y):
         self.target = None
         self.rot_choice = None
-        self.hit = None
-        self.wall_angle = None
-        self.dist = None
-        self.walls = None
 
         self.groups = game.all_sprites, game.mobs
         pg.sprite.Sprite.__init__(self, self.groups)
@@ -124,29 +111,10 @@ class Mob(pg.sprite.Sprite):
         self.rect.center = self.pos
         self.vel = vec(0, 0)
         self.rot = 0
-        self.hit_rect = pg.Rect(0, 0, TILESIZE, TILESIZE)
+        self.hit_rect = pg.Rect(0, 0, 25, 25)
         self.hit_rect.center = self.rect.center
         self.last_shot = 0
         self.health = MOB_HEALTH
-        self.hit_pos = vec(0, 0)
-        self.type = mob_type
-
-    def get_walls(self):
-        self.walls = self.game.wall_pos_vecs
-
-    def check_dist(self, pos):
-        self.dist = (pos - self.pos).length_squared()
-        if self.dist < self.dist_limit:
-            return True
-        else:
-            return False
-
-    def check_dir(self, pos):
-        self.wall_angle = (pos - self.pos).angle_to(vec(1, 0))
-        if -self.fov < (self.target_dir - self.wall_angle) < self.fov:
-            return True
-        else:
-            return False
 
     def move(self):
         self.rot_choice = randrange(0, 100)
@@ -161,7 +129,6 @@ class Mob(pg.sprite.Sprite):
         self.vel = vec(MOB_SPEED, 0)
 
     def update(self):
-        self.hit = 0
         self.target = self.game.player
         self.target_dist = self.target.pos - self.pos
 
@@ -187,8 +154,10 @@ class Mob(pg.sprite.Sprite):
         self.image = pg.transform.rotate(self.game.mob_img, self.rot)
         self.rect = self.image.get_rect()
         self.rect.center = self.pos
+
         self.vel = self.vel.rotate((-self.rot))
         self.pos += self.vel * self.game.dt
+
         self.hit_rect.centerx = self.pos.x
         collisionx = collide_with_walls(self, self.game.walls, 'x')
         self.hit_rect.centery = self.pos.y
@@ -252,7 +221,6 @@ def collide_with_walls(sprite, group, dir):
             return True
 
 
-
 def intersect(segment1, segment2):
     start1, end1 = segment1
     start2, end2 = segment2
@@ -290,6 +258,6 @@ def intersect(segment1, segment2):
 
     # Check whether the point of intersection is within the range of both line segments
     return (min(start1[0], end1[0]) <= x <= max(start1[0], end1[0])) and (
-                min(start2[0], end2[0]) <= x <= max(start2[0], end2[0])) and (
-                min(start1[1], end1[1]) <= y <= max(start1[1], end1[1])) and (
-                min(start2[1], end2[1]) <= y <= max(start2[1], end2[1]))
+            min(start2[0], end2[0]) <= x <= max(start2[0], end2[0])) and (
+            min(start1[1], end1[1]) <= y <= max(start1[1], end1[1])) and (
+            min(start2[1], end2[1]) <= y <= max(start2[1], end2[1]))

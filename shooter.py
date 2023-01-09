@@ -39,16 +39,22 @@ class Game:
         game_dir = path.dirname(__file__)
         img_dir = path.join(game_dir, 'img')
         map_dir = path.join(game_dir, 'maps')
+
         # Load map
-        self.map = Map(path.join(map_dir, 'Map2.txt'))
+        self.map = Map(path.join(map_dir, 'Map3.txt'))
+
         # Load imgs
         self.player_img = pg.image.load(path.join(img_dir, 'player.png')).convert_alpha()
-        self.player_img = pg.transform.scale(self.player_img, (50, 25))
+        self.player_img = pg.transform.scale(self.player_img, (30, 15))
+
         self.bullet_imgs = {}
         self.bullet_imgs['GREEN'] = pg.image.load(path.join(img_dir, 'bullet1.png')).convert_alpha()
+        self.bullet_imgs['GREEN'] = pg.transform.scale(self.bullet_imgs['GREEN'], (5, 5))
         self.bullet_imgs['RED'] = pg.image.load(path.join(img_dir, 'bullet2.png')).convert_alpha()
+        self.bullet_imgs['RED'] = pg.transform.scale(self.bullet_imgs['RED'], (5, 5))
+
         self.mob_img = pg.image.load(path.join(img_dir, 'mob.png')).convert_alpha()
-        self.mob_img = pg.transform.scale(self.mob_img, (50, 25))
+        self.mob_img = pg.transform.scale(self.mob_img, (30, 15))
 
     def new(self):
         # initiate sprite groups
@@ -58,6 +64,7 @@ class Game:
         self.mobs = pg.sprite.Group()
         self.wall_pos_vecs = []
         self.wall_pairs = []
+        self.draw_rects = False
 
         # create map from map_data
         for row, tiles in enumerate(self.map.data):
@@ -69,10 +76,9 @@ class Game:
                     self.player = Player(self, col, row)
                 if tile == 'M':
                     self.mob = Mob(self, col, row)
-        self.draw_rects = False
 
-        for mob in self.mobs:
-            mob.get_walls()
+        self.player.health = len(self.mobs) * PLAYER_HEALTH
+        self.player_health_bar = self.player.health
 
         for i, vector1 in enumerate(self.wall_pos_vecs):
             for vector2 in self.wall_pos_vecs[i + 1:]:
@@ -158,8 +164,7 @@ class Game:
             for pair in self.wall_pairs:
                 pg.draw.line(self.screen, GREEN, pair[0] + offset_pairs, pair[1] + offset_pairs)
 
-
-        draw_player_health(self.screen, 10, 10, self.player.health / PLAYER_HEALTH)
+        draw_player_health(self.screen, 10, 10, self.player.health / self.player_health_bar)
         # AFTER drawing
         pg.display.flip()
 
