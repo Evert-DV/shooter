@@ -191,8 +191,6 @@ class Boss(Mob):
 
     def __init__(self, game, x, y):
         super().__init__(game, x, y)
-        self.groups = game.bosses
-        pg.sprite.Sprite.__init__(self, self.groups)
         self.path = []
         self.image = self.game.boss_img
         self.reset_image = self.image
@@ -206,6 +204,9 @@ class Boss(Mob):
         if self.reset_path > 3 * FPS:
             self.reset_path = 0
             self.find_path()
+
+        if self.health <= 0:
+            super().kill()
 
     def move(self):
         if not len(self.path) == 0:

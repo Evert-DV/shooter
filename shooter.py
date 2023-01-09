@@ -31,6 +31,8 @@ class Game:
         pg.display.set_caption(TITLE)
         self.clock = pg.time.Clock()
         self.running = True
+        self.maps = []
+        self.level = 1
         self.font_name = pg.font.match_font(FONT)
         self.load_data()
 
@@ -40,8 +42,9 @@ class Game:
         img_dir = path.join(game_dir, 'img')
         map_dir = path.join(game_dir, 'maps')
 
-        # Load map
-        self.map = Map(path.join(map_dir, 'Map3.txt'))
+        # Load map levels
+        for level in range(3):
+            self.maps.append(Map(path.join(map_dir, f"Map{level+1}.txt")))
 
         # Load imgs
         self.player_img = pg.image.load(path.join(img_dir, 'player.png')).convert_alpha()
@@ -65,11 +68,11 @@ class Game:
         self.walls = pg.sprite.Group()
         self.bullets = pg.sprite.Group()
         self.mobs = pg.sprite.Group()
-        self.bosses = pg.sprite.Group()
 
         self.wall_pos_vecs = []
         self.wall_pairs = []
         self.draw_rects = False
+        self.map = self.maps[self.level]
 
         # setup graph for boss mobs
         self.graph, self.obstacles = create_graph(self.map.data)
@@ -88,7 +91,7 @@ class Game:
                     self.boss = Boss(self, col, row)
 
         #set player health based on amount of enemies
-        self.player.health = (len(self.mobs) + len(self.bosses)) * PLAYER_HEALTH
+        self.player.health = len(self.mobs) * PLAYER_HEALTH
         self.player_health_bar = self.player.health
 
         # add wall edges for enemies vision detection
@@ -136,16 +139,23 @@ class Game:
                     self.running = False
                 if event.key == pg.K_h:
                     self.draw_rects = not self.draw_rects
+
         # bullet hits
         hits = pg.sprite.groupcollide(self.mobs, self.bullets, False, True, collide_hit_rect)
         for hit in hits:
             hit.health -= BULLET_DAMAGE * len(hits[hit])
+
         hits = pg.sprite.spritecollide(self.player, self.bullets, True, collide_hit_rect)
         for hit in hits:
             self.player.health -= BULLET_DAMAGE
             if self.player.health <= 0:
                 self.playing = False
                 self.running = False
+
+        if len(self.mobs) == 0:
+            self.playing = False
+            self.level += 1
+            self.new()
 
     def update(self):
         # game loop update
@@ -181,10 +191,10 @@ class Game:
                     pg.draw.line(self.screen, YELLOW, self.camera.apply(mob).center,
                                  self.camera.apply(mob.target).center)
 
-            for boss in self.bosses:
-                for point in boss.path:
-                    point = vec(point) * TILESIZE + vec(TILESIZE/2, TILESIZE/2)
-                    pg.draw.circle(self.screen, LIGHTBLUE, point + offset_pairs, 3, 1)
+                if isinstance(mob, Boss):
+                    for point in mob.path:
+                        point = vec(point) * TILESIZE + vec(TILESIZE/2, TILESIZE/2)
+                        pg.draw.circle(self.screen, LIGHTBLUE, point + offset_pairs, 3, 1)
 
             for pair in self.wall_pairs:
                 pg.draw.line(self.screen, GREEN, pair[0] + offset_pairs, pair[1] + offset_pairs)
