@@ -41,20 +41,23 @@ class Game:
         map_dir = path.join(game_dir, 'maps')
 
         # Load map
-        self.map = Map(path.join(map_dir, 'Map3.txt'))
+        self.map = Map(path.join(map_dir, 'Map.txt'))
 
         # Load imgs
         self.player_img = pg.image.load(path.join(img_dir, 'player.png')).convert_alpha()
         self.player_img = pg.transform.scale(self.player_img, (30, 15))
+
+        self.mob_img = pg.image.load(path.join(img_dir, 'mob.png')).convert_alpha()
+        self.mob_img = pg.transform.scale(self.mob_img, (30, 15))
+
+        self.boss_img = pg.image.load(path.join(img_dir, 'boss.png')).convert_alpha()
+        self.boss_img = pg.transform.scale(self.boss_img, (30, 15))
 
         self.bullet_imgs = {}
         self.bullet_imgs['GREEN'] = pg.image.load(path.join(img_dir, 'bullet1.png')).convert_alpha()
         self.bullet_imgs['GREEN'] = pg.transform.scale(self.bullet_imgs['GREEN'], (5, 5))
         self.bullet_imgs['RED'] = pg.image.load(path.join(img_dir, 'bullet2.png')).convert_alpha()
         self.bullet_imgs['RED'] = pg.transform.scale(self.bullet_imgs['RED'], (5, 5))
-
-        self.mob_img = pg.image.load(path.join(img_dir, 'mob.png')).convert_alpha()
-        self.mob_img = pg.transform.scale(self.mob_img, (30, 15))
 
     def new(self):
         # initiate sprite groups
@@ -66,6 +69,9 @@ class Game:
         self.wall_pairs = []
         self.draw_rects = False
 
+        self.graph, self.obstacles = create_graph(self.map.data)
+        self.path_finder = Pathfinder(self.graph, self.obstacles, manhattan_distance)
+
         # create map from map_data
         for row, tiles in enumerate(self.map.data):
             for col, tile in enumerate(tiles):
@@ -76,6 +82,8 @@ class Game:
                     self.player = Player(self, col, row)
                 if tile == 'M':
                     self.mob = Mob(self, col, row)
+                if tile == 'B':
+                    self.boss = Boss(self, col, row)
 
         self.player.health = len(self.mobs) * PLAYER_HEALTH
         self.player_health_bar = self.player.health
@@ -160,6 +168,10 @@ class Game:
                 if mob.target_dist.length_squared() < DETECT_RADIUS ** 2:
                     pg.draw.line(self.screen, YELLOW, self.camera.apply(mob).center,
                                  self.camera.apply(mob.target).center)
+
+            for point in self.boss.path:
+                point = vec(point) * TILESIZE
+                pg.draw.circle(self.screen, LIGHTBLUE, point + offset_pairs, 1)
 
             for pair in self.wall_pairs:
                 pg.draw.line(self.screen, GREEN, pair[0] + offset_pairs, pair[1] + offset_pairs)

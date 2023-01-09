@@ -1,6 +1,6 @@
 from random import randrange
-import math
 from tilemap import *
+import heapq
 
 vec = pg.math.Vector2
 
@@ -71,7 +71,6 @@ class Wall(pg.sprite.Sprite):
         self.pos = vec(x, y) * TILESIZE
         self.rect.x = self.pos.x
         self.rect.y = self.pos.y
-        # self.mask = pg.mask.from_surface(self.image)
 
 
 class Bullet(pg.sprite.Sprite):
@@ -105,8 +104,11 @@ class Mob(pg.sprite.Sprite):
         self.groups = game.all_sprites, game.mobs
         pg.sprite.Sprite.__init__(self, self.groups)
         self.game = game
+
         self.image = self.game.mob_img
+        self.reset_image = self.image
         self.rect = self.image.get_rect()
+
         self.pos = vec(x, y) * TILESIZE
         self.rect.center = self.pos
         self.vel = vec(0, 0)
@@ -125,7 +127,7 @@ class Mob(pg.sprite.Sprite):
         elif 98.5 > self.rot_choice:
             self.rot += -90
 
-        self.rot -= (self.rot % 90)
+        self.rot = (self.rot // 90) * 90
         self.vel = vec(MOB_SPEED, 0)
 
     def update(self):
@@ -151,7 +153,7 @@ class Mob(pg.sprite.Sprite):
         else:
             self.move()
 
-        self.image = pg.transform.rotate(self.game.mob_img, self.rot)
+        self.image = pg.transform.rotate(self.reset_image, self.rot)
         self.rect = self.image.get_rect()
         self.rect.center = self.pos
 
@@ -178,10 +180,122 @@ class Mob(pg.sprite.Sprite):
             col = YELLOW
         else:
             col = RED
+
         width = int(50 * self.health / MOB_HEALTH)
         self.health_bar = pg.Rect(0, 0, width, 7)
+
         if self.health < MOB_HEALTH:
             pg.draw.rect(self.image, col, self.health_bar)
+
+
+class Boss(Mob):
+
+    def __init__(self, game, x, y):
+        super().__init__(game, x, y)
+        self.path = []
+        self.image = self.game.boss_img
+        self.reset_image = self.image
+        self.reset_path = 0
+
+    def update(self):
+        super().update()
+        self.reset_path += 1
+
+        if self.reset_path > 60:
+            self.reset_path = 0
+            self.find_path()
+
+    def move(self):
+        if not len(self.path) == 0:
+            point = vec(self.path[0]) * TILESIZE + 2 * [TILESIZE // 2]
+            direction = point - self.pos
+            direction = direction.angle_to(vec(1, 0))
+            self.rot = (direction // 90) * 90
+            self.vel = vec(MOB_SPEED, 0)
+
+            if (point - self.pos).length_squared() < TILESIZE ** 2:
+                self.path = self.path[1:]
+
+
+        # self.target_dir = self.target_dist.angle_to(vec(1, 0))
+        # self.rot = (self.target_dir // 90) * 90
+        # self.vel = vec(MOB_SPEED, 0)
+        #
+        # check = pg.sprite.spritecollideany(self, self.game.walls)
+        # if check:
+        #     self.rot += 180
+
+    def find_path(self):
+        start = tuple(self.pos // TILESIZE)
+        end = tuple(self.target.pos // TILESIZE)
+        self.path = self.game.path_finder.search(start, end)
+
+
+class Pathfinder:
+    def __init__(self, graph, obstacles, heuristic):
+        self.graph = graph
+        self.obstacles = obstacles
+        self.heuristic = heuristic
+
+    def search(self, start, end):
+        # initialize the priority queue with the start node
+        queue = [(0, start, [start])]
+        # keep track of which nodes have been visited
+        visited = set()
+
+        # continue searching while there are still nodes in the queue
+        while queue:
+            # get the next node to search
+            cost, node, path = heapq.heappop(queue)
+            # mark the node as visited
+            visited.add(node)
+
+            # check if we have reached the end
+            if node == end:
+                return path
+
+            # add all unvisited, non-obstacle neighbors to the queue
+            for neighbor in self.graph[node]:
+                if neighbor not in visited and neighbor not in self.obstacles:
+                    # compute the cost to reach the neighbor
+                    # new_cost = cost + 1
+                    # compute the heuristic value for the neighbor
+                    heuristic_value = self.heuristic(neighbor, end)
+                    # add the neighbor to the queue with the cost, heuristic value, and path
+                    heapq.heappush(queue, (heuristic_value, neighbor, path + [neighbor]))
+
+        # if the end was not reached, return an empty path
+        return []
+
+
+def manhattan_distance(node, target):
+    return abs(node[0] - target[0]) + abs(node[1] - target[1])
+
+
+def create_graph(tilemap):
+    # create an empty graph
+    graph = {}
+    obstacles = []
+
+    # add a key for each tile in the map
+    for y, row in enumerate(tilemap):
+        for x, tile in enumerate(row):
+            graph[(x, y)] = []
+
+    # add neighbors for each tile
+    for y, row in enumerate(tilemap):
+        for x, tile in enumerate(row):
+            # skip obstacles
+            if tile == '1':
+                obstacles.append((x, y))
+            # add neighbors to the right, left, above, and below
+            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                if 0 <= x + dx < len(row) and 0 <= y + dy < len(tilemap):
+                    neighbor = (x + dx, y + dy)
+                    # only add non-obstacle neighbors to the graph
+                    if tilemap[y + dy][x + dx] != '1':
+                        graph[(x, y)].append(neighbor)
+    return graph, obstacles
 
 
 def shoot(sprite, color):
