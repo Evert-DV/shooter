@@ -54,7 +54,7 @@ class Player(pg.sprite.Sprite):
     def move(self):
         self.vel = vec(PLAYER_SPEED, 0)
 
-        self.rot = (self.mouse_dir // 45) * 45
+        self.rot = round(self.mouse_dir / 45) * 45
 
         self.vel = self.vel.rotate((-self.rot))
 
@@ -100,7 +100,6 @@ class Mob(pg.sprite.Sprite):
     def __init__(self, game, x, y):
         self.target = None
         self.rot_choice = None
-
         self.groups = game.all_sprites, game.mobs
         pg.sprite.Sprite.__init__(self, self.groups)
         self.game = game
@@ -127,7 +126,7 @@ class Mob(pg.sprite.Sprite):
         elif 98.5 > self.rot_choice:
             self.rot += -90
 
-        self.rot = (self.rot // 90) * 90
+        self.rot = round(self.rot / 90) * 90
         self.vel = vec(MOB_SPEED, 0)
 
     def update(self):
@@ -192,43 +191,41 @@ class Boss(Mob):
 
     def __init__(self, game, x, y):
         super().__init__(game, x, y)
+        self.groups = game.bosses
+        pg.sprite.Sprite.__init__(self, self.groups)
         self.path = []
         self.image = self.game.boss_img
         self.reset_image = self.image
         self.reset_path = 0
+        self.path_finder = Pathfinder(self.game.graph, self.game.obstacles, manhattan_distance)
 
     def update(self):
         super().update()
         self.reset_path += 1
 
-        if self.reset_path > 60:
+        if self.reset_path > 3 * FPS:
             self.reset_path = 0
             self.find_path()
 
     def move(self):
         if not len(self.path) == 0:
-            point = vec(self.path[0]) * TILESIZE + 2 * [TILESIZE // 2]
+            point = vec(self.path[0]) * TILESIZE + vec(TILESIZE/2, TILESIZE/2)
             direction = point - self.pos
             direction = direction.angle_to(vec(1, 0))
-            self.rot = (direction // 90) * 90
-            self.vel = vec(MOB_SPEED, 0)
+            self.rot = round(direction / 90) * 90
 
-            if (point - self.pos).length_squared() < TILESIZE ** 2:
+            if (point - self.pos).length_squared() < (0.25 * TILESIZE) ** 2:
                 self.path = self.path[1:]
+        else:
+            self.target_dir = self.target_dist.angle_to(vec(1, 0))
+            self.rot = (self.target_dir // 90) * 90
 
-
-        # self.target_dir = self.target_dist.angle_to(vec(1, 0))
-        # self.rot = (self.target_dir // 90) * 90
-        # self.vel = vec(MOB_SPEED, 0)
-        #
-        # check = pg.sprite.spritecollideany(self, self.game.walls)
-        # if check:
-        #     self.rot += 180
+        self.vel = vec(MOB_SPEED * 0.85, 0)
 
     def find_path(self):
         start = tuple(self.pos // TILESIZE)
         end = tuple(self.target.pos // TILESIZE)
-        self.path = self.game.path_finder.search(start, end)
+        self.path = self.path_finder.search(start, end)
 
 
 class Pathfinder:

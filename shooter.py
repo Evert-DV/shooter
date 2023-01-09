@@ -41,7 +41,7 @@ class Game:
         map_dir = path.join(game_dir, 'maps')
 
         # Load map
-        self.map = Map(path.join(map_dir, 'Map.txt'))
+        self.map = Map(path.join(map_dir, 'Map3.txt'))
 
         # Load imgs
         self.player_img = pg.image.load(path.join(img_dir, 'player.png')).convert_alpha()
@@ -65,12 +65,14 @@ class Game:
         self.walls = pg.sprite.Group()
         self.bullets = pg.sprite.Group()
         self.mobs = pg.sprite.Group()
+        self.bosses = pg.sprite.Group()
+
         self.wall_pos_vecs = []
         self.wall_pairs = []
         self.draw_rects = False
 
+        # setup graph for boss mobs
         self.graph, self.obstacles = create_graph(self.map.data)
-        self.path_finder = Pathfinder(self.graph, self.obstacles, manhattan_distance)
 
         # create map from map_data
         for row, tiles in enumerate(self.map.data):
@@ -85,14 +87,27 @@ class Game:
                 if tile == 'B':
                     self.boss = Boss(self, col, row)
 
-        self.player.health = len(self.mobs) * PLAYER_HEALTH
+        #set player health based on amount of enemies
+        self.player.health = (len(self.mobs) + len(self.bosses)) * PLAYER_HEALTH
         self.player_health_bar = self.player.health
 
-        for i, vector1 in enumerate(self.wall_pos_vecs):
-            for vector2 in self.wall_pos_vecs[i + 1:]:
-                distance = vector1.distance_to(vector2)
-                if distance <= TILESIZE:
-                    self.wall_pairs.append([vector1 + 2 * [TILESIZE // 2], vector2 + 2*[TILESIZE // 2]])
+        # add wall edges for enemies vision detection
+        for vector in self.wall_pos_vecs:
+            pair = [vector, vector + vec(TILESIZE, 0)]
+            if pair not in self.wall_pairs:
+                self.wall_pairs.append(pair)
+
+            pair = [vector, vector + vec(0, TILESIZE)]
+            if pair not in self.wall_pairs:
+                self.wall_pairs.append(pair)
+
+            pair = [vector + vec(0, TILESIZE), vector + vec(TILESIZE, TILESIZE)]
+            if pair not in self.wall_pairs:
+                self.wall_pairs.append(pair)
+
+            pair = [vector + vec(TILESIZE, 0), vector + vec(TILESIZE, TILESIZE)]
+            if pair not in self.wall_pairs:
+                self.wall_pairs.append(pair)
 
         self.camera = Camera(self.map.width, self.map.height)
         self.run()
@@ -158,9 +173,6 @@ class Game:
                 if i == 1:
                     break
 
-            for wall in self.walls:
-                pg.draw.rect(self.screen, GREEN, self.camera.apply_rect(wall.rect), 2)
-
             for mob in self.mobs:
                 pg.draw.rect(self.screen, RED, self.camera.apply_rect(mob.hit_rect), 2)
                 pg.draw.circle(self.screen, BLUE, self.camera.apply(mob).center, DETECT_RADIUS, 2)
@@ -169,9 +181,10 @@ class Game:
                     pg.draw.line(self.screen, YELLOW, self.camera.apply(mob).center,
                                  self.camera.apply(mob.target).center)
 
-            for point in self.boss.path:
-                point = vec(point) * TILESIZE
-                pg.draw.circle(self.screen, LIGHTBLUE, point + offset_pairs, 1)
+            for boss in self.bosses:
+                for point in boss.path:
+                    point = vec(point) * TILESIZE + vec(TILESIZE/2, TILESIZE/2)
+                    pg.draw.circle(self.screen, LIGHTBLUE, point + offset_pairs, 3, 1)
 
             for pair in self.wall_pairs:
                 pg.draw.line(self.screen, GREEN, pair[0] + offset_pairs, pair[1] + offset_pairs)
