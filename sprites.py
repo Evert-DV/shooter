@@ -1,4 +1,4 @@
-from random import randrange
+from random import randrange, choice
 from tilemap import *
 import heapq
 
@@ -118,13 +118,11 @@ class Mob(pg.sprite.Sprite):
         self.health = MOB_HEALTH
 
     def move(self):
-        self.rot_choice = randrange(0, 100)
-        if 1.5 < self.rot_choice < 98.5:
-            self.rot += 0
-        elif 1.5 < self.rot_choice:
-            self.rot += 90
-        elif 98.5 > self.rot_choice:
-            self.rot += -90
+        self.rot_choice = randrange(0, 30)
+        if self.rot_choice < 29:
+            pass
+        else:
+            self.rot += choice([-1, 1]) * 90
 
         self.rot = round(self.rot / 90) * 90
         self.vel = vec(MOB_SPEED, 0)
@@ -210,18 +208,18 @@ class Boss(Mob):
 
     def move(self):
         if not len(self.path) == 0:
-            point = vec(self.path[0]) * TILESIZE + vec(TILESIZE/2, TILESIZE/2)
+            point = vec(self.path[0]) * TILESIZE + vec(TILESIZE / 2, TILESIZE / 2)
             direction = point - self.pos
             direction = direction.angle_to(vec(1, 0))
-            self.rot = round(direction / 90) * 90
+            self.rot = round(direction / 45) * 45
 
             if (point - self.pos).length_squared() < (0.25 * TILESIZE) ** 2:
                 self.path = self.path[1:]
         else:
             self.target_dir = self.target_dist.angle_to(vec(1, 0))
-            self.rot = (self.target_dir // 90) * 90
+            self.rot = (self.target_dir // 45) * 45
 
-        self.vel = vec(MOB_SPEED * 0.85, 0)
+        self.vel = vec(MOB_SPEED, 0)
 
     def find_path(self):
         start = tuple(self.pos // TILESIZE)
@@ -255,12 +253,10 @@ class Pathfinder:
             # add all unvisited, non-obstacle neighbors to the queue
             for neighbor in self.graph[node]:
                 if neighbor not in visited and neighbor not in self.obstacles:
-                    # compute the cost to reach the neighbor
-                    # new_cost = cost + 1
                     # compute the heuristic value for the neighbor
                     heuristic_value = self.heuristic(neighbor, end)
                     # add the neighbor to the queue with the cost, heuristic value, and path
-                    heapq.heappush(queue, (heuristic_value, neighbor, path + [neighbor]))
+                    heapq.heappush(queue, (heuristic_value + 0.1 * len(path), neighbor, path + [neighbor]))
 
         # if the end was not reached, return an empty path
         return []
