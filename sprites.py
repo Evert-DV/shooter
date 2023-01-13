@@ -2,8 +2,6 @@ from random import randrange, choice
 from tilemap import *
 import heapq
 
-vec = pg.math.Vector2
-
 
 class Player(pg.sprite.Sprite):
     def __init__(self, game, x, y):
@@ -266,28 +264,28 @@ def manhattan_distance(node, target):
     return abs(node[0] - target[0]) + abs(node[1] - target[1])
 
 
-def create_graph(tilemap):
+def create_graph(map_data):
     # create an empty graph
     graph = {}
     obstacles = []
 
     # add a key for each tile in the map
-    for y, row in enumerate(tilemap):
-        for x, tile in enumerate(row):
+    for y in range(map_data.height):
+        for x in range(map_data.width):
             graph[(x, y)] = []
 
     # add neighbors for each tile
-    for y, row in enumerate(tilemap):
-        for x, tile in enumerate(row):
+    for y in range(map_data.height):
+        for x in range(map_data.width):
             # skip obstacles
-            if tile == '1':
+            if map_data.getpixel((x, y)) == (0, 0, 0):
                 obstacles.append((x, y))
             # add neighbors to the right, left, above, and below
             for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-                if 0 <= x + dx < len(row) and 0 <= y + dy < len(tilemap):
+                if 0 <= x + dx < map_data.width and 0 <= y + dy < map_data.height:
                     neighbor = (x + dx, y + dy)
                     # only add non-obstacle neighbors to the graph
-                    if tilemap[y + dy][x + dx] != '1':
+                    if map_data.getpixel(neighbor) != (0, 0, 0):
                         graph[(x, y)].append(neighbor)
     return graph, obstacles
 

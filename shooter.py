@@ -32,7 +32,7 @@ class Game:
         self.clock = pg.time.Clock()
         self.running = True
         self.maps = []
-        self.level = 3
+        self.level = 0
         self.font_name = pg.font.match_font(FONT)
         self.load_data()
 
@@ -40,11 +40,11 @@ class Game:
         # setup directories
         game_dir = path.dirname(__file__)
         img_dir = path.join(game_dir, 'img')
-        map_dir = path.join(game_dir, 'maps')
+        map_dir = path.join(game_dir, 'levels')
 
         # Load map levels
         for level in range(4):
-            self.maps.append(Map(path.join(map_dir, f"Map{level+1}.txt")))
+            self.maps.append(Map(path.join(map_dir, f"level{level+1}.png")))
 
         # Load imgs
         self.player_img = pg.image.load(path.join(img_dir, 'player.png')).convert_alpha()
@@ -78,16 +78,17 @@ class Game:
         self.graph, self.obstacles = create_graph(self.map.data)
 
         # create map from map_data
-        for row, tiles in enumerate(self.map.data):
-            for col, tile in enumerate(tiles):
-                if tile == '1':
+        for row in range(self.map.data.height):
+            for col in range(self.map.data.width):
+                pixel = self.map.data.getpixel((col, row))
+                if pixel == (0, 0, 0):
                     self.wall = Wall(self, col, row)
                     self.wall_pos_vecs.append(self.wall.pos)
-                if tile == 'P':
+                elif pixel == (128, 128, 128):
                     self.player = Player(self, col, row)
-                if tile == 'M':
+                elif pixel == (255, 0, 0):
                     self.mob = Mob(self, col, row)
-                if tile == 'B':
+                elif pixel == (128, 0, 128):
                     self.boss = Boss(self, col, row)
 
         #set player health based on amount of enemies

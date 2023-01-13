@@ -2,12 +2,12 @@ import PIL
 from PIL import Image
 
 # Open the image file
-im = Image.open("Map imgs/level2.png")
+im = Image.open("levels/level3.png")
 
 # Convert the image to grayscale
 # im = im.convert("L")
 
-with open("maps/Map4.txt", 'w') as f:
+with open("maps/Map6.txt", 'w') as f:
     # Iterate over each row of pixels
     for y in range(im.height):
         # Initialize an empty string for the current row

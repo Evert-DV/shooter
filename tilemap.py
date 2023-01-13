@@ -4,12 +4,9 @@ from PIL import Image
 
 class Map:
     def __init__(self, filename):
-        self.data = []
-        with open(filename, 'rt') as f:
-            for line in f:
-                self.data.append(line.strip())
-        self.tilewidth = len(self.data[0])
-        self.tileheight = len(self.data)
+        self.data = Image.open(filename)
+        self.tilewidth = self.data.width
+        self.tileheight = self.data.height
         self.width = self.tilewidth * TILESIZE
         self.height = self.tileheight * TILESIZE
 
