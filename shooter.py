@@ -32,7 +32,7 @@ class Game:
         self.clock = pg.time.Clock()
         self.running = True
         self.maps = []
-        self.level = 1
+        self.level = 3
         self.font_name = pg.font.match_font(FONT)
         self.load_data()
 
@@ -43,7 +43,7 @@ class Game:
         map_dir = path.join(game_dir, 'maps')
 
         # Load map levels
-        for level in range(3):
+        for level in range(4):
             self.maps.append(Map(path.join(map_dir, f"Map{level+1}.txt")))
 
         # Load imgs

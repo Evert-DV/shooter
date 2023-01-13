@@ -1,4 +1,5 @@
 from settings import *
+from PIL import Image
 
 
 class Map:

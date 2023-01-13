@@ -164,8 +164,8 @@ class Mob(pg.sprite.Sprite):
         self.rect.center = self.hit_rect.center
 
         if collisionx or collisiony:
-            self.rot += 180
-            self.rot -= (self.rot % 90)
+            self.rot += choice([-90, 90, 180])
+            # self.rot -= (self.rot % 90)
 
         if self.health <= 0:
             self.kill()
@@ -217,7 +217,7 @@ class Boss(Mob):
                 self.path = self.path[1:]
         else:
             self.target_dir = self.target_dist.angle_to(vec(1, 0))
-            self.rot = (self.target_dir // 45) * 45
+            self.rot = round(self.target_dir / 45) * 45
 
         self.vel = vec(MOB_SPEED, 0)
 
@@ -256,7 +256,7 @@ class Pathfinder:
                     # compute the heuristic value for the neighbor
                     heuristic_value = self.heuristic(neighbor, end)
                     # add the neighbor to the queue with the cost, heuristic value, and path
-                    heapq.heappush(queue, (heuristic_value + 0.1 * len(path), neighbor, path + [neighbor]))
+                    heapq.heappush(queue, (heuristic_value + 0.5 * len(path), neighbor, path + [neighbor]))
 
         # if the end was not reached, return an empty path
         return []
