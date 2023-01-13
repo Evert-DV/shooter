@@ -43,7 +43,7 @@ class Game:
         map_dir = path.join(game_dir, 'levels')
 
         # Load map levels
-        for level in range(4):
+        for level in range(5):
             self.maps.append(Map(path.join(map_dir, f"level{level+1}.png")))
 
         # Load imgs
