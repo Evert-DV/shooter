@@ -1,3 +1,4 @@
+import math
 from random import randrange, choice
 from tilemap import *
 import heapq
@@ -21,6 +22,8 @@ class Player(pg.sprite.Sprite):
         self.hit_rect = pg.Rect(0, 0, 25, 25)
         self.hit_rect.center = self.rect.center
         self.last_shot = 0
+        self.bullet_color = 'GREEN'
+        self.mines = 1
 
     def update(self):
         self.mouse_pos = vec(pg.mouse.get_pos())
@@ -47,7 +50,13 @@ class Player(pg.sprite.Sprite):
         keys = pg.key.get_pressed()
         left, _, right = pg.mouse.get_pressed()
         if keys[pg.K_SPACE] or left:
-            shoot(self, 'GREEN')
+            shoot(self)
+        if right and self.mines > 0:
+            Mine(self.game, self, self.pos.x, self.pos.y)
+            self.mines -= 1
+
+        if self.health <= 0:
+            self.kill()
 
     def move(self):
         self.vel = vec(PLAYER_SPEED, 0)
@@ -115,6 +124,8 @@ class Mob(pg.sprite.Sprite):
         self.last_shot = 0
         self.health = MOB_HEALTH
 
+        self.bullet_color = 'RED'
+
     def move(self):
         self.rot_choice = randrange(0, 30)
         if self.rot_choice < 29:
@@ -141,7 +152,7 @@ class Mob(pg.sprite.Sprite):
                 self.target_dir = self.target_dist.angle_to(vec(1, 0))
                 self.rot = self.target_dir
                 self.vel = vec(0, 0)
-                shoot(self, 'RED')
+                shoot(self)
 
             else:
                 self.move()
@@ -162,7 +173,7 @@ class Mob(pg.sprite.Sprite):
         self.rect.center = self.hit_rect.center
 
         if collisionx or collisiony:
-            self.rot += choice([-90, 90, 180])
+            self.rot += choice([-90, 90, 180, 180])
             # self.rot -= (self.rot % 90)
 
         if self.health <= 0:
@@ -192,6 +203,8 @@ class Boss(Mob):
         self.reset_image = self.image
         self.reset_path = 0
         self.path_finder = Pathfinder(self.game.graph, self.game.obstacles, manhattan_distance)
+        self.bullet_color = 'PURPLE'
+        self.mines = 1
 
     def update(self):
         super().update()
@@ -203,6 +216,12 @@ class Boss(Mob):
 
         if self.health <= 0:
             super().kill()
+
+        if self.mines > 0:
+            lay_mine = randrange(0, 500)
+            if lay_mine == 1:
+                Mine(self.game, self, self.pos.x, self.pos.y)
+                self.mines -= 1
 
     def move(self):
         if not len(self.path) == 0:
@@ -223,6 +242,84 @@ class Boss(Mob):
         start = tuple(self.pos // TILESIZE)
         end = tuple(self.target.pos // TILESIZE)
         self.path = self.path_finder.search(start, end)
+
+
+class Mine(pg.sprite.Sprite):
+
+    def __init__(self, game, sprite, x, y):
+        self.groups = game.all_sprites
+        pg.sprite.Sprite.__init__(self, self.groups)
+        self.game = game
+        self.sprite = sprite
+
+        self.mine_frames = game.mine_imgs
+        self.image = self.mine_frames[0]
+        self.img_index = 0
+        self.flick = 0
+
+        self.boom_frames = game.boom_imgs
+        self.boom_frame = 0
+
+        self.rect = self.image.get_rect()
+        self.pos = vec(x, y)
+        self.rect.center = self.pos
+
+        self.armed = False
+        self.detonated = False
+        self.placed_time = pg.time.get_ticks()
+        self.timer = randrange(20000, 120000)
+
+    def update(self):
+        now = pg.time.get_ticks()
+
+        if not self.armed and (now - self.placed_time) > 3000:
+            self.armed = True
+            self.image = self.mine_frames[1]
+
+        if self.detonated:
+            self.explosion()
+
+        elif self.armed:
+            if now - self.placed_time >= (self.timer - 5000):
+                self.flicker()
+                if now - self.placed_time >= self.timer:
+                    self.boom()
+                    self.detonated = True
+
+            hits = pg.sprite.spritecollide(self, self.game.all_sprites, False)
+            if len(hits) > 1:
+                self.boom()
+                self.detonated = True
+
+        self.rect = self.image.get_rect()
+        self.rect.center = self.pos
+
+    def flicker(self):
+        self.flick += 1
+        if self.flick % 15 == 0:
+            self.img_index += 1
+            self.img_index = self.img_index % 2
+            self.image = self.mine_frames[self.img_index]
+
+    def boom(self):
+        for hit in self.game.mobs:
+            distance = (self.pos - hit.pos).length()
+            if distance <= BLAST_RADIUS:
+                hit.kill()
+        if (self.game.player.pos - self.pos).length() <= BLAST_RADIUS:
+            self.game.player.kill()
+
+        self.last_frame = pg.time.get_ticks()
+
+    def explosion(self):
+        now = pg.time.get_ticks()
+        self.image = self.boom_frames[self.boom_frame]
+        if (now - self.last_frame) > 75:
+            self.last_frame = pg.time.get_ticks()
+            self.boom_frame += 1
+            if self.boom_frame >= len(self.boom_frames):
+                self.kill()
+                self.sprite.mines += 1
 
 
 class Pathfinder:
@@ -290,13 +387,13 @@ def create_graph(map_data):
     return graph, obstacles
 
 
-def shoot(sprite, color):
+def shoot(sprite):
     now = pg.time.get_ticks()
     if now - sprite.last_shot > RATE:
         sprite.last_shot = now
         dir = vec(1, 0).rotate(-sprite.rot)
         pos = sprite.pos + BARREL_OFFSET.rotate(-sprite.rot)
-        Bullet(sprite.game, pos, dir.rotate(randrange(-1, 1)), color)
+        Bullet(sprite.game, pos, dir.rotate(randrange(-1, 1)), sprite.bullet_color)
 
 
 def collide_hit_rect(one, two):

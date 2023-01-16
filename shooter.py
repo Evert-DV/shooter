@@ -32,7 +32,7 @@ class Game:
         self.clock = pg.time.Clock()
         self.running = True
         self.maps = []
-        self.level = 0
+        self.level = 2
         self.font_name = pg.font.match_font(FONT)
         self.load_data()
 
@@ -57,10 +57,42 @@ class Game:
         self.boss_img = pg.transform.scale(self.boss_img, (30, 15))
 
         self.bullet_imgs = {}
-        self.bullet_imgs['GREEN'] = pg.image.load(path.join(img_dir, 'bullet1.png')).convert_alpha()
-        self.bullet_imgs['GREEN'] = pg.transform.scale(self.bullet_imgs['GREEN'], (5, 5))
-        self.bullet_imgs['RED'] = pg.image.load(path.join(img_dir, 'bullet2.png')).convert_alpha()
-        self.bullet_imgs['RED'] = pg.transform.scale(self.bullet_imgs['RED'], (5, 5))
+
+        self.green_surface = pg.Surface((6, 6), pg.SRCALPHA)
+        pg.draw.circle(self.green_surface, GREEN, (3, 3), 3, 0)
+        self.bullet_imgs['GREEN'] = self.green_surface
+
+        self.red_surface = pg.Surface((6, 6), pg.SRCALPHA)
+        pg.draw.circle(self.red_surface, RED, (3, 3), 3, 0)
+        self.bullet_imgs['RED'] = self.red_surface
+
+        self.purple_surface = pg.Surface((6, 6), pg.SRCALPHA)
+        pg.draw.circle(self.purple_surface, PURPLE, (3, 3), 3, 0)
+        self.bullet_imgs['PURPLE'] = self.purple_surface
+
+        mine_img = pg.Surface((32, 32), pg.SRCALPHA)
+        pg.draw.circle(mine_img, GREY, (16, 16), 16)
+        pg.draw.circle(mine_img, DARKGREY, (16, 16), 10)
+
+        armed_img = pg.Surface((32, 32), pg.SRCALPHA)
+        pg.draw.circle(armed_img, GREY, (16, 16), 16)
+        pg.draw.circle(armed_img, LIGHTBLUE, (16, 16), 10)
+
+        boom_frame1 = pg.Surface((50, 50), pg.SRCALPHA)
+        pg.draw.circle(boom_frame1, YELLOW, (25, 25), 25)
+
+        boom_frame2 = pg.Surface((100, 100), pg.SRCALPHA)
+        pg.draw.circle(boom_frame2, (255, 128, 0), (50, 50), 50)
+
+        boom_frame3 = pg.Surface((200, 200), pg.SRCALPHA)
+        pg.draw.circle(boom_frame3, RED, (100, 100), 100, 30)
+
+        boom_frame4 = pg.Surface((200, 200), pg.SRCALPHA)
+        pg.draw.circle(boom_frame4, DARKGREY, (100, 100), 100, 15)
+
+        self.boom_imgs = [boom_frame1, boom_frame2, boom_frame3, boom_frame4]
+
+        self.mine_imgs = [mine_img, armed_img]
 
     def new(self):
         # initiate sprite groups
@@ -81,14 +113,14 @@ class Game:
         for row in range(self.map.data.height):
             for col in range(self.map.data.width):
                 pixel = self.map.data.getpixel((col, row))
-                if pixel == (0, 0, 0):
+                if pixel == BLACK:
                     self.wall = Wall(self, col, row)
                     self.wall_pos_vecs.append(self.wall.pos)
-                elif pixel == (128, 128, 128):
+                elif pixel == GREY:
                     self.player = Player(self, col, row)
-                elif pixel == (255, 0, 0):
+                elif pixel == RED:
                     self.mob = Mob(self, col, row)
-                elif pixel == (128, 0, 128):
+                elif pixel == PURPLE:
                     self.boss = Boss(self, col, row)
 
         #set player health based on amount of enemies
@@ -149,14 +181,15 @@ class Game:
         hits = pg.sprite.spritecollide(self.player, self.bullets, True, collide_hit_rect)
         for hit in hits:
             self.player.health -= BULLET_DAMAGE
-            if self.player.health <= 0:
-                self.playing = False
-                self.running = False
 
         if len(self.mobs) == 0:
             self.playing = False
             self.level += 1
             self.new()
+
+        if self.player not in self.all_sprites:
+            self.playing = False
+            self.running = False
 
     def update(self):
         # game loop update
