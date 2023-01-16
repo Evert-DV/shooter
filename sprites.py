@@ -114,6 +114,7 @@ class Mob(pg.sprite.Sprite):
         self.image = self.game.mob_img
         self.reset_image = self.image
         self.rect = self.image.get_rect()
+        self.boom_frame = 0
 
         self.pos = vec(x, y) * TILESIZE
         self.rect.center = self.pos
@@ -123,6 +124,7 @@ class Mob(pg.sprite.Sprite):
         self.hit_rect.center = self.rect.center
         self.last_shot = 0
         self.health = MOB_HEALTH
+        self.dead = False
 
         self.bullet_color = 'RED'
 
@@ -174,10 +176,13 @@ class Mob(pg.sprite.Sprite):
 
         if collisionx or collisiony:
             self.rot += choice([-90, 90, 180, 180])
-            # self.rot -= (self.rot % 90)
 
         if self.health <= 0:
-            self.kill()
+            if self.dead:
+                explosion(self)
+            else:
+                self.last_frame = pg.time.get_ticks()
+                self.dead = True
 
     def draw_health(self):
         if self.health > 6:
@@ -214,8 +219,8 @@ class Boss(Mob):
             self.reset_path = 0
             self.find_path()
 
-        if self.health <= 0:
-            super().kill()
+        # if self.health <= 0:
+        #     super().kill()
 
         if self.mines > 0:
             lay_mine = randrange(0, 500)
@@ -277,7 +282,7 @@ class Mine(pg.sprite.Sprite):
             self.image = self.mine_frames[1]
 
         if self.detonated:
-            self.explosion()
+            explosion(self)
 
         elif self.armed:
             if now - self.placed_time >= (self.timer - 5000):
@@ -300,6 +305,7 @@ class Mine(pg.sprite.Sprite):
             self.image = self.mine_frames[self.img_index]
 
     def boom(self):
+        self.sprite.mines += 1
         self.detonated = True
         for hit in self.game.mobs:
             distance = (self.pos - hit.pos).length()
@@ -315,16 +321,6 @@ class Mine(pg.sprite.Sprite):
             self.game.player.kill()
 
         self.last_frame = pg.time.get_ticks()
-
-    def explosion(self):
-        now = pg.time.get_ticks()
-        self.image = self.boom_frames[self.boom_frame]
-        if (now - self.last_frame) > 75:
-            self.last_frame = pg.time.get_ticks()
-            self.boom_frame += 1
-            if self.boom_frame >= len(self.boom_frames):
-                self.kill()
-                self.sprite.mines += 1
 
 
 class Pathfinder:
@@ -390,6 +386,18 @@ def create_graph(map_data):
                     if map_data.getpixel(neighbor) != (0, 0, 0):
                         graph[(x, y)].append(neighbor)
     return graph, obstacles
+
+
+def explosion(sprite):
+    now = pg.time.get_ticks()
+    sprite.image = sprite.game.boom_imgs[sprite.boom_frame]
+    sprite.rect = sprite.image.get_rect()
+    sprite.rect.center = sprite.pos
+    if (now - sprite.last_frame) > 75:
+        sprite.last_frame = pg.time.get_ticks()
+        sprite.boom_frame += 1
+        if sprite.boom_frame >= len(sprite.game.boom_imgs):
+            sprite.kill()
 
 
 def shoot(sprite):
