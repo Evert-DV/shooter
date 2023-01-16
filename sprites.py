@@ -247,7 +247,7 @@ class Boss(Mob):
 class Mine(pg.sprite.Sprite):
 
     def __init__(self, game, sprite, x, y):
-        self.groups = game.all_sprites
+        self.groups = game.all_sprites, game.mines
         pg.sprite.Sprite.__init__(self, self.groups)
         self.game = game
         self.sprite = sprite
@@ -284,12 +284,10 @@ class Mine(pg.sprite.Sprite):
                 self.flicker()
                 if now - self.placed_time >= self.timer:
                     self.boom()
-                    self.detonated = True
 
             hits = pg.sprite.spritecollide(self, self.game.all_sprites, False)
             if len(hits) > 1:
                 self.boom()
-                self.detonated = True
 
         self.rect = self.image.get_rect()
         self.rect.center = self.pos
@@ -302,10 +300,17 @@ class Mine(pg.sprite.Sprite):
             self.image = self.mine_frames[self.img_index]
 
     def boom(self):
+        self.detonated = True
         for hit in self.game.mobs:
             distance = (self.pos - hit.pos).length()
             if distance <= BLAST_RADIUS:
                 hit.kill()
+
+        for mine in self.game.mines:
+            if mine != self:
+                if (mine.pos - self.pos).length() <= BLAST_RADIUS and not mine.detonated:
+                    mine.boom()
+
         if (self.game.player.pos - self.pos).length() <= BLAST_RADIUS:
             self.game.player.kill()
 

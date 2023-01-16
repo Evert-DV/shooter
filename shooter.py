@@ -100,6 +100,7 @@ class Game:
         self.walls = pg.sprite.Group()
         self.bullets = pg.sprite.Group()
         self.mobs = pg.sprite.Group()
+        self.mines = pg.sprite.Group()
 
         self.wall_pos_vecs = []
         self.wall_pairs = []
@@ -232,6 +233,9 @@ class Game:
 
             for pair in self.wall_pairs:
                 pg.draw.line(self.screen, GREEN, pair[0] + offset_pairs, pair[1] + offset_pairs)
+
+            for mine in self.mines:
+                pg.draw.circle(self.screen, LIGHTBLUE, self.camera.apply_rect(mine.rect).center, BLAST_RADIUS, 1)
 
         draw_player_health(self.screen, 10, 10, self.player.health / self.player_health_bar)
         # AFTER drawing
