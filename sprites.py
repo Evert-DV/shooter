@@ -307,18 +307,17 @@ class Mine(pg.sprite.Sprite):
     def boom(self):
         self.sprite.mines += 1
         self.detonated = True
-        for hit in self.game.mobs:
+        for hit in self.game.all_sprites:
+            if isinstance(hit, Wall) or hit == self:
+                continue
+
             distance = (self.pos - hit.pos).length()
             if distance <= BLAST_RADIUS:
-                hit.kill()
-
-        for mine in self.game.mines:
-            if mine != self:
-                if (mine.pos - self.pos).length() <= BLAST_RADIUS and not mine.detonated:
-                    mine.boom()
-
-        if (self.game.player.pos - self.pos).length() <= BLAST_RADIUS:
-            self.game.player.kill()
+                if isinstance(hit, Mine):
+                    if not hit.detonated:
+                        hit.boom()
+                else:
+                    hit.kill()
 
         self.last_frame = pg.time.get_ticks()
 
