@@ -32,7 +32,7 @@ class Game:
         self.clock = pg.time.Clock()
         self.running = True
         self.maps = []
-        self.level = 0
+        self.level = 2
         self.font_name = pg.font.match_font(FONT)
         self.load_data()
 

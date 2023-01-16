@@ -19,7 +19,7 @@ class Player(pg.sprite.Sprite):
         self.pos = vec(x, y) * TILESIZE
         self.vel = vec(0, 0)
         self.rot = 0
-        self.hit_rect = pg.Rect(0, 0, 25, 25)
+        self.hit_rect = pg.Rect(0, 0, 20, 20)
         self.hit_rect.center = self.rect.center
         self.last_shot = 0
         self.bullet_color = 'GREEN'
@@ -120,7 +120,7 @@ class Mob(pg.sprite.Sprite):
         self.rect.center = self.pos
         self.vel = vec(0, 0)
         self.rot = 0
-        self.hit_rect = pg.Rect(0, 0, 25, 25)
+        self.hit_rect = pg.Rect(0, 0, 20, 20)
         self.hit_rect.center = self.rect.center
         self.last_shot = 0
         self.health = MOB_HEALTH
@@ -219,9 +219,6 @@ class Boss(Mob):
             self.reset_path = 0
             self.find_path()
 
-        # if self.health <= 0:
-        #     super().kill()
-
         if self.mines > 0:
             lay_mine = randrange(0, 500)
             if lay_mine == 1:
@@ -237,9 +234,14 @@ class Boss(Mob):
 
             if (point - self.pos).length_squared() < (0.25 * TILESIZE) ** 2:
                 self.path = self.path[1:]
+
         else:
             self.target_dir = self.target_dist.angle_to(vec(1, 0))
             self.rot = round(self.target_dir / 45) * 45
+
+        for mine in self.game.mines:
+            if (self.pos - mine.pos).length() < BLAST_RADIUS and mine.armed:
+                self.avoid_mines(mine)
 
         self.vel = vec(MOB_SPEED, 0)
 
@@ -247,6 +249,34 @@ class Boss(Mob):
         start = tuple(self.pos // TILESIZE)
         end = tuple(self.target.pos // TILESIZE)
         self.path = self.path_finder.search(start, end)
+
+    def avoid_mines(self, mine):
+        if len(self.path) != 0:
+            for point in self.path:
+                sink = vec(point) * TILESIZE + vec(TILESIZE / 2, TILESIZE / 2)
+                if (sink - mine.pos).length() <= BLAST_RADIUS:
+                    self.path.remove(point)
+                else:
+                    break
+
+        else:
+            sink = self.target.pos
+        source = mine.pos
+
+        push_vec = (self.pos - source)
+        pull_vec = (sink - self.pos)
+
+        push = 1 / (push_vec.length() - TILESIZE / 2) ** 2
+        pull = 10 / pull_vec.length() ** 2
+
+        F_push = push * push_vec / push_vec.length()
+        F_pull = pull * pull_vec / pull_vec.length()
+
+        F = F_pull + F_push
+        angle = F.angle_to(vec(1, 0))
+        angle = round(angle / 45) * 45
+
+        self.rot = angle
 
 
 class Mine(pg.sprite.Sprite):
