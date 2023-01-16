@@ -129,8 +129,8 @@ class Mob(pg.sprite.Sprite):
         self.bullet_color = 'RED'
 
     def move(self):
-        self.rot_choice = randrange(0, 30)
-        if self.rot_choice < 29:
+        self.rot_choice = randrange(0, 50)
+        if self.rot_choice < 49:
             pass
         else:
             self.rot += choice([-1, 1]) * 90
@@ -175,7 +175,7 @@ class Mob(pg.sprite.Sprite):
         self.rect.center = self.hit_rect.center
 
         if collisionx or collisiony:
-            self.rot += choice([-90, 90, 180, 180])
+            self.rot += choice([-90, 90, 180])
 
         if self.health <= 0:
             if self.dead:
@@ -267,7 +267,7 @@ class Boss(Mob):
         pull_vec = (sink - self.pos)
 
         push = 1 / (push_vec.length() - TILESIZE / 2) ** 2
-        pull = 10 / pull_vec.length() ** 2
+        pull = 25 / pull_vec.length() ** 2
 
         F_push = push * push_vec / push_vec.length()
         F_pull = pull * pull_vec / pull_vec.length()
@@ -302,7 +302,7 @@ class Mine(pg.sprite.Sprite):
         self.armed = False
         self.detonated = False
         self.placed_time = pg.time.get_ticks()
-        self.timer = randrange(20000, 120000)
+        self.timer = randrange(20000, 120000, 2000)
 
     def update(self):
         now = pg.time.get_ticks()
@@ -315,7 +315,7 @@ class Mine(pg.sprite.Sprite):
             explosion(self)
 
         elif self.armed:
-            if now - self.placed_time >= (self.timer - 5000):
+            if now - self.placed_time >= (self.timer - 3000):
                 self.flicker()
                 if now - self.placed_time >= self.timer:
                     self.boom()
@@ -329,7 +329,7 @@ class Mine(pg.sprite.Sprite):
 
     def flicker(self):
         self.flick += 1
-        if self.flick % 15 == 0:
+        if self.flick % 10 == 0:
             self.img_index += 1
             self.img_index = self.img_index % 2
             self.image = self.mine_frames[self.img_index]
@@ -346,8 +346,11 @@ class Mine(pg.sprite.Sprite):
                 if isinstance(hit, Mine):
                     if not hit.detonated:
                         hit.boom()
-                else:
+                elif isinstance(hit, Bullet):
                     hit.kill()
+                else:
+                    damage = 10 / (2 * TILESIZE / distance) ** (-2)
+                    hit.health -= damage
 
         self.last_frame = pg.time.get_ticks()
 
