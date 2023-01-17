@@ -32,7 +32,7 @@ class Game:
         self.clock = pg.time.Clock()
         self.running = True
         self.maps = []
-        self.level = 2
+        self.level = 2#randrange(0, 6)
         self.font_name = pg.font.match_font(FONT)
         self.load_data()
 
@@ -43,7 +43,7 @@ class Game:
         map_dir = path.join(game_dir, 'levels')
 
         # Load map levels
-        for level in range(6):
+        for level in range(7):
             self.maps.append(Map(path.join(map_dir, f"level{level+1}.png")))
 
         # Load imgs
@@ -70,25 +70,25 @@ class Game:
         pg.draw.circle(self.purple_surface, PURPLE, (3, 3), 3, 0)
         self.bullet_imgs['PURPLE'] = self.purple_surface
 
-        mine_img = pg.Surface((32, 32), pg.SRCALPHA)
-        pg.draw.circle(mine_img, GREY, (16, 16), 16)
-        pg.draw.circle(mine_img, DARKGREY, (16, 16), 10)
+        mine_img = pg.Surface((TILESIZE, TILESIZE), pg.SRCALPHA)
+        pg.draw.circle(mine_img, GREY, (TILESIZE//2, TILESIZE//2), TILESIZE//2)
+        pg.draw.circle(mine_img, DARKGREY, (TILESIZE//2, TILESIZE//2), 10)
 
-        armed_img = pg.Surface((32, 32), pg.SRCALPHA)
-        pg.draw.circle(armed_img, GREY, (16, 16), 16)
-        pg.draw.circle(armed_img, LIGHTBLUE, (16, 16), 10)
+        armed_img = pg.Surface((TILESIZE, TILESIZE), pg.SRCALPHA)
+        pg.draw.circle(armed_img, GREY, (TILESIZE//2, TILESIZE//2), TILESIZE//2)
+        pg.draw.circle(armed_img, LIGHTBLUE, (TILESIZE//2, TILESIZE//2), 10)
 
-        boom_frame1 = pg.Surface((50, 50), pg.SRCALPHA)
-        pg.draw.circle(boom_frame1, YELLOW, (25, 25), 25)
+        boom_frame1 = pg.Surface((BLAST_RADIUS//2, BLAST_RADIUS//2), pg.SRCALPHA)
+        pg.draw.circle(boom_frame1, YELLOW, (BLAST_RADIUS//4, BLAST_RADIUS//4), BLAST_RADIUS//4)
 
-        boom_frame2 = pg.Surface((100, 100), pg.SRCALPHA)
-        pg.draw.circle(boom_frame2, (255, 128, 0), (50, 50), 50)
+        boom_frame2 = pg.Surface((BLAST_RADIUS, BLAST_RADIUS), pg.SRCALPHA)
+        pg.draw.circle(boom_frame2, ORANGE, (BLAST_RADIUS//2, BLAST_RADIUS//2), BLAST_RADIUS//2)
 
-        boom_frame3 = pg.Surface((200, 200), pg.SRCALPHA)
-        pg.draw.circle(boom_frame3, RED, (100, 100), 100, 30)
+        boom_frame3 = pg.Surface((2*BLAST_RADIUS, 2*BLAST_RADIUS), pg.SRCALPHA)
+        pg.draw.circle(boom_frame3, RED, (BLAST_RADIUS, BLAST_RADIUS), BLAST_RADIUS, 30)
 
-        boom_frame4 = pg.Surface((200, 200), pg.SRCALPHA)
-        pg.draw.circle(boom_frame4, DARKGREY, (100, 100), 100, 15)
+        boom_frame4 = pg.Surface((2*BLAST_RADIUS, 2*BLAST_RADIUS), pg.SRCALPHA)
+        pg.draw.circle(boom_frame4, DARKGREY, (BLAST_RADIUS, BLAST_RADIUS), BLAST_RADIUS, 15)
 
         self.boom_imgs = [boom_frame1, boom_frame2, boom_frame3, boom_frame4]
 

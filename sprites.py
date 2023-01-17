@@ -219,7 +219,7 @@ class Boss(Mob):
             self.reset_path = 0
             self.find_path()
 
-        if self.mines > 0:
+        if self.mines > 0 and len(self.path) != 0:
             lay_mine = randrange(0, 500)
             if lay_mine == 1:
                 Mine(self.game, self, self.pos.x, self.pos.y)
@@ -240,7 +240,7 @@ class Boss(Mob):
             self.rot = round(self.target_dir / 45) * 45
 
         for mine in self.game.mines:
-            if (self.pos - mine.pos).length() < BLAST_RADIUS and mine.armed:
+            if (self.pos - mine.pos).length() < 0.75 * BLAST_RADIUS and mine.armed:
                 self.avoid_mines(mine)
 
         self.vel = vec(MOB_SPEED, 0)
@@ -254,7 +254,7 @@ class Boss(Mob):
         if len(self.path) != 0:
             for point in self.path:
                 sink = vec(point) * TILESIZE + vec(TILESIZE / 2, TILESIZE / 2)
-                if (sink - mine.pos).length() <= BLAST_RADIUS:
+                if (sink - mine.pos).length() <= 0.75 * BLAST_RADIUS:
                     self.path.remove(point)
                 else:
                     break
@@ -349,7 +349,7 @@ class Mine(pg.sprite.Sprite):
                 elif isinstance(hit, Bullet):
                     hit.kill()
                 else:
-                    damage = 10 / (2 * TILESIZE / distance) ** (-2)
+                    damage = MOB_HEALTH / (2 * distance / BLAST_RADIUS) ** 2
                     hit.health -= damage
 
         self.last_frame = pg.time.get_ticks()
