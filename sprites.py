@@ -219,14 +219,17 @@ class Boss(Mob):
             self.reset_path = 0
             self.find_path()
 
-        if self.mines > 0 and len(self.path) != 0:
+        if self.mines > 0 and self.following_path:
             lay_mine = randrange(0, 500)
             if lay_mine == 1:
                 Mine(self.game, self, self.pos.x, self.pos.y)
                 self.mines -= 1
 
     def move(self):
+        self.following_path = False
+
         if not len(self.path) == 0:
+            self.following_path = True
             point = vec(self.path[0]) * TILESIZE + vec(TILESIZE / 2, TILESIZE / 2)
             direction = point - self.pos
             direction = direction.angle_to(vec(1, 0))
@@ -251,13 +254,13 @@ class Boss(Mob):
         end = tuple(self.target.pos // TILESIZE)
         self.path = self.path_finder.search(start, end)
 
-    def avoid_mines(self, mine):
+    def avoid_mines(self, mine=None):
         walls = get_close_walls(self, self.game, BLAST_RADIUS)
         sink = self.target.pos
 
         if len(self.path) != 0:
             for point in self.path:
-                if (TILESIZE * vec(point) + vec(TILESIZE/2, TILESIZE/2) - mine.pos).length() <= BLAST_RADIUS:
+                if (TILESIZE * vec(point) + vec(TILESIZE/2, TILESIZE/2) - mine.pos).length() <= 0.8*BLAST_RADIUS:
                     self.path.remove(point)
                 else:
                     sink = vec(point) * TILESIZE + vec(TILESIZE / 2, TILESIZE / 2)
@@ -268,12 +271,13 @@ class Boss(Mob):
         # the push force from all the wall obstacles
         for wall in walls:
             r_vec_wall = (self.pos - wall)
-            push_magnitude = 0.5 / (r_vec_wall.length() - TILESIZE / 2) ** 2
+            push_magnitude = 1 / (r_vec_wall.length() - TILESIZE / 2) ** 2
             F_push += push_magnitude * (r_vec_wall / r_vec_wall.length())
 
-        r_vec_mine = (self.pos - mine.pos)
-        push_magnitude = 5 / (r_vec_mine.length() - TILESIZE / 2) ** 2
-        F_push += push_magnitude * (r_vec_mine / r_vec_mine.length())
+        if mine is not None:
+            r_vec_mine = (self.pos - mine.pos)
+            push_magnitude = 3 / (r_vec_mine.length() - TILESIZE / 2) ** 2
+            F_push += push_magnitude * (r_vec_mine / r_vec_mine.length())
 
         pull_vec = (sink - self.pos)
         pull = 100 / pull_vec.length() ** 2
