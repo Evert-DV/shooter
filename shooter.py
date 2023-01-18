@@ -102,8 +102,6 @@ class Game:
         self.mobs = pg.sprite.Group()
         self.mines = pg.sprite.Group()
 
-        self.wall_pos_vecs = []
-        self.wall_diagonals = []
         self.draw_rects = False
         self.map = self.maps[self.level]
 
@@ -116,7 +114,6 @@ class Game:
                 pixel = self.map.data.getpixel((col, row))
                 if pixel == BLACK:
                     self.wall = Wall(self, col, row)
-                    self.wall_pos_vecs.append(self.wall.pos)
                 elif pixel == GREY:
                     self.player = Player(self, col, row)
                 elif pixel == RED:
@@ -127,17 +124,6 @@ class Game:
         #set player health based on amount of enemies
         self.player.health = len(self.mobs) * PLAYER_HEALTH
         self.player_health_bar = self.player.health
-
-        # add wall edges for enemies vision detection
-        for vector in self.wall_pos_vecs:
-            pair = [vector, vector + vec(TILESIZE, TILESIZE)]
-            if pair not in self.wall_diagonals:
-                self.wall_diagonals.append(pair)
-
-            pair = [vector + vec(0, TILESIZE), vector + vec(TILESIZE, 0)]
-            if pair not in self.wall_diagonals:
-                self.wall_diagonals.append(pair)
-
 
         self.camera = Camera(self.map.width, self.map.height)
         self.run()
@@ -205,27 +191,28 @@ class Game:
             pg.draw.rect(self.screen, DARKGREY, self.camera.apply_rect(self.player.rect), 2)
             pg.draw.rect(self.screen, GREY, self.camera.apply_rect(self.player.hit_rect), 2)
 
-            for i, wall in enumerate(self.walls):
-                offset_pairs = self.camera.apply(wall).center
-                offset_pairs -= vec(1.5 * TILESIZE, TILESIZE // 2)
-                if i == 1:
-                    break
+            camera_offset = self.camera.apply(list(self.walls)[0]).center
+            camera_offset -= vec(TILESIZE //2, TILESIZE // 2)
 
+
+            
             for mob in self.mobs:
                 pg.draw.rect(self.screen, RED, self.camera.apply_rect(mob.hit_rect), 2)
                 pg.draw.circle(self.screen, BLUE, self.camera.apply(mob).center, DETECT_RADIUS, 2)
 
-                if mob.target_dist.length_squared() < DETECT_RADIUS ** 2:
+                for wall in mob.close_walls:
+                    for pair in wall.diagonals:
+                        pg.draw.line(self.screen, GREEN, pair[0] + camera_offset, pair[1] + camera_offset)
+
+
+                if mob.target_dist.length() < DETECT_RADIUS:
                     pg.draw.line(self.screen, YELLOW, self.camera.apply(mob).center,
                                  self.camera.apply(mob.target).center)
 
                 if isinstance(mob, Boss):
                     for point in mob.path:
                         point = vec(point) * TILESIZE + vec(TILESIZE/2, TILESIZE/2)
-                        pg.draw.circle(self.screen, LIGHTBLUE, point + offset_pairs, 3, 1)
-
-            for pair in self.wall_diagonals:
-                pg.draw.line(self.screen, GREEN, pair[0] + offset_pairs, pair[1] + offset_pairs)
+                        pg.draw.circle(self.screen, LIGHTBLUE, point + camera_offset, 3, 1)
 
             for mine in self.mines:
                 pg.draw.circle(self.screen, LIGHTBLUE, self.camera.apply_rect(mine.rect).center, BLAST_RADIUS, 1)

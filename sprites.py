@@ -1,4 +1,3 @@
-import math
 from random import randrange, choice
 from tilemap import *
 import heapq
@@ -78,6 +77,8 @@ class Wall(pg.sprite.Sprite):
         self.pos = vec(x, y) * TILESIZE
         self.rect.x = self.pos.x
         self.rect.y = self.pos.y
+        self.diagonals = [[self.pos, self.pos + vec(TILESIZE, TILESIZE)],
+                          [self.pos + vec(TILESIZE, 0), self.pos + vec(0, TILESIZE)]]
 
 
 class Bullet(pg.sprite.Sprite):
@@ -107,6 +108,9 @@ class Mob(pg.sprite.Sprite):
     def __init__(self, game, x, y):
         self.target = None
         self.rot_choice = None
+        self.check_walls = True
+        self.close_walls = []
+
         self.groups = game.all_sprites, game.mobs
         pg.sprite.Sprite.__init__(self, self.groups)
         self.game = game
@@ -144,9 +148,18 @@ class Mob(pg.sprite.Sprite):
 
         if self.target_dist.length() < DETECT_RADIUS:
             ray = [self.pos, self.target.pos]
+
+            if self.check_walls:
+                self.check_walls = False
+                self.close_walls = get_close_walls(self, self.game.walls, DETECT_RADIUS)
+                # self.close_walls = get_close_walls(self.target, self.close_walls, DETECT_RADIUS)
+
             blind = False
-            for pair in self.game.wall_diagonals:
-                blind = intersect(pair, ray)
+            for wall in self.close_walls:
+                for pair in wall.diagonals:
+                    blind = intersect(pair, ray)
+                    if blind:
+                        break
                 if blind:
                     break
 
@@ -157,8 +170,10 @@ class Mob(pg.sprite.Sprite):
                 shoot(self)
 
             else:
+                self.check_walls = True
                 self.move()
         else:
+            self.check_walls = True
             self.move()
 
         self.image = pg.transform.rotate(self.reset_image, self.rot)
@@ -254,7 +269,7 @@ class Boss(Mob):
         self.path = self.path_finder.search(start, end)
 
     def avoid_mines(self, mine=None):
-        walls = get_close_walls(self, self.game, BLAST_RADIUS)
+        walls = get_close_walls(self, self.game.walls, BLAST_RADIUS)
         sink = self.target.pos
 
         if len(self.path) != 0:
@@ -269,7 +284,7 @@ class Boss(Mob):
 
         # the push force from all the wall obstacles
         for wall in walls:
-            r_vec_wall = (self.pos - wall)
+            r_vec_wall = (self.pos - wall.pos)
             push_magnitude = 1 / (r_vec_wall.length() - TILESIZE / 2) ** 2
             F_push += push_magnitude * (r_vec_wall / r_vec_wall.length())
 
@@ -359,7 +374,7 @@ class Mine(pg.sprite.Sprite):
                 elif isinstance(hit, Bullet):
                     hit.kill()
                 else:
-                    damage = 2 * MOB_HEALTH * (1 - (distance / BLAST_RADIUS) ** 2)
+                    damage = self.game.player_health_bar * (1 - (distance / BLAST_RADIUS) ** 2)
                     hit.health -= damage
 
         self.last_frame = pg.time.get_ticks()
@@ -430,14 +445,13 @@ def create_graph(map_data):
     return graph, obstacles
 
 
-def get_close_walls(sprite, game, radius):
-    walls = game.wall_pos_vecs
+def get_close_walls(sprite, walls, radius):
     position = sprite.pos
     close_walls = []
 
-    for wall_pos in walls:
-        if (wall_pos - position).length() < radius:
-            close_walls.append(wall_pos)
+    for wall in walls:
+        if (wall.pos - position).length() < radius:
+            close_walls.append(wall)
 
     return close_walls
 
