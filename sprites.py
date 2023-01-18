@@ -145,7 +145,7 @@ class Mob(pg.sprite.Sprite):
         if self.target_dist.length_squared() < DETECT_RADIUS ** 2:
             ray = [self.pos, self.target.pos]
             blind = False
-            for pair in self.game.wall_pairs:
+            for pair in self.game.wall_diagonals:
                 blind = intersect(pair, ray)
                 if blind:
                     break
@@ -236,11 +236,12 @@ class Boss(Mob):
                 self.path = self.path[1:]
 
         else:
-            self.target_dir = self.target_dist.angle_to(vec(1, 0))
-            self.rot = round(self.target_dir / 45) * 45
+            super().move()
+            # self.target_dir = self.target_dist.angle_to(vec(1, 0))
+            # self.rot = round(self.target_dir / 45) * 45
 
         for mine in self.game.mines:
-            if (self.pos - mine.pos).length() < 0.75 * BLAST_RADIUS and mine.armed:
+            if (self.pos - mine.pos).length() < BLAST_RADIUS and mine.armed:
                 self.avoid_mines(mine)
 
         self.vel = vec(MOB_SPEED, 0)
@@ -251,25 +252,31 @@ class Boss(Mob):
         self.path = self.path_finder.search(start, end)
 
     def avoid_mines(self, mine):
+        walls = get_close_walls(self, self.game, BLAST_RADIUS)
+        sink = self.target.pos
+
         if len(self.path) != 0:
             for point in self.path:
-                sink = vec(point) * TILESIZE + vec(TILESIZE / 2, TILESIZE / 2)
-                if (sink - mine.pos).length() <= 0.75 * BLAST_RADIUS:
+                if (TILESIZE * vec(point) + vec(TILESIZE/2, TILESIZE/2) - mine.pos).length() <= BLAST_RADIUS:
                     self.path.remove(point)
                 else:
+                    sink = vec(point) * TILESIZE + vec(TILESIZE / 2, TILESIZE / 2)
                     break
 
-        else:
-            sink = self.target.pos
-        source = mine.pos
+        F_push = vec(0, 0)  # force vector of collective push forces from walls and mines
 
-        push_vec = (self.pos - source)
+        # the push force from all the wall obstacles
+        for wall in walls:
+            r_vec_wall = (self.pos - wall)
+            push_magnitude = 0.5 / (r_vec_wall.length() - TILESIZE / 2) ** 2
+            F_push += push_magnitude * (r_vec_wall / r_vec_wall.length())
+
+        r_vec_mine = (self.pos - mine.pos)
+        push_magnitude = 5 / (r_vec_mine.length() - TILESIZE / 2) ** 2
+        F_push += push_magnitude * (r_vec_mine / r_vec_mine.length())
+
         pull_vec = (sink - self.pos)
-
-        push = 1 / (push_vec.length() - TILESIZE / 2) ** 2
-        pull = 25 / pull_vec.length() ** 2
-
-        F_push = push * push_vec / push_vec.length()
+        pull = 100 / pull_vec.length() ** 2
         F_pull = pull * pull_vec / pull_vec.length()
 
         F = F_pull + F_push
@@ -314,7 +321,7 @@ class Mine(pg.sprite.Sprite):
         if self.detonated:
             explosion(self)
 
-        elif self.armed:
+        elif self.armed and not self.detonated:
             if now - self.placed_time >= (self.timer - 3000):
                 self.flicker()
                 if now - self.placed_time >= self.timer:
@@ -361,7 +368,7 @@ class Pathfinder:
         self.obstacles = obstacles
         self.heuristic = heuristic
 
-    def search(self, start, end):
+    def search(self, start, end, max_size=100):
         # initialize the priority queue with the start node
         queue = [(0, start, [start])]
         # keep track of which nodes have been visited
@@ -375,7 +382,7 @@ class Pathfinder:
             visited.add(node)
 
             # check if we have reached the end
-            if node == end:
+            if node == end or len(path) >= max_size:
                 return path
 
             # add all unvisited, non-obstacle neighbors to the queue
@@ -420,11 +427,24 @@ def create_graph(map_data):
     return graph, obstacles
 
 
+def get_close_walls(sprite, game, radius):
+    walls = game.wall_pos_vecs
+    position = sprite.pos
+    close_walls = []
+
+    for wall_pos in walls:
+        if (wall_pos - position).length() < radius:
+            close_walls.append(wall_pos)
+
+    return close_walls
+
+
 def explosion(sprite):
     now = pg.time.get_ticks()
     sprite.image = sprite.game.boom_imgs[sprite.boom_frame]
     sprite.rect = sprite.image.get_rect()
     sprite.rect.center = sprite.pos
+    sprite.rect.width, sprite.rect.height = 1, 1
     if (now - sprite.last_frame) > 75:
         sprite.last_frame = pg.time.get_ticks()
         sprite.boom_frame += 1

@@ -103,7 +103,7 @@ class Game:
         self.mines = pg.sprite.Group()
 
         self.wall_pos_vecs = []
-        self.wall_pairs = []
+        self.wall_diagonals = []
         self.draw_rects = False
         self.map = self.maps[self.level]
 
@@ -130,21 +130,14 @@ class Game:
 
         # add wall edges for enemies vision detection
         for vector in self.wall_pos_vecs:
-            pair = [vector, vector + vec(TILESIZE, 0)]
-            if pair not in self.wall_pairs:
-                self.wall_pairs.append(pair)
+            pair = [vector, vector + vec(TILESIZE, TILESIZE)]
+            if pair not in self.wall_diagonals:
+                self.wall_diagonals.append(pair)
 
-            pair = [vector, vector + vec(0, TILESIZE)]
-            if pair not in self.wall_pairs:
-                self.wall_pairs.append(pair)
+            pair = [vector + vec(0, TILESIZE), vector + vec(TILESIZE, 0)]
+            if pair not in self.wall_diagonals:
+                self.wall_diagonals.append(pair)
 
-            pair = [vector + vec(0, TILESIZE), vector + vec(TILESIZE, TILESIZE)]
-            if pair not in self.wall_pairs:
-                self.wall_pairs.append(pair)
-
-            pair = [vector + vec(TILESIZE, 0), vector + vec(TILESIZE, TILESIZE)]
-            if pair not in self.wall_pairs:
-                self.wall_pairs.append(pair)
 
         self.camera = Camera(self.map.width, self.map.height)
         self.run()
@@ -231,13 +224,14 @@ class Game:
                         point = vec(point) * TILESIZE + vec(TILESIZE/2, TILESIZE/2)
                         pg.draw.circle(self.screen, LIGHTBLUE, point + offset_pairs, 3, 1)
 
-            for pair in self.wall_pairs:
+            for pair in self.wall_diagonals:
                 pg.draw.line(self.screen, GREEN, pair[0] + offset_pairs, pair[1] + offset_pairs)
 
             for mine in self.mines:
                 pg.draw.circle(self.screen, LIGHTBLUE, self.camera.apply_rect(mine.rect).center, BLAST_RADIUS, 1)
 
         draw_player_health(self.screen, 10, 10, self.player.health / self.player_health_bar)
+
         # AFTER drawing
         pg.display.flip()
 
