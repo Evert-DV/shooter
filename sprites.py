@@ -142,7 +142,7 @@ class Mob(pg.sprite.Sprite):
         self.target = self.game.player
         self.target_dist = self.target.pos - self.pos
 
-        if self.target_dist.length_squared() < DETECT_RADIUS ** 2:
+        if self.target_dist.length() < DETECT_RADIUS:
             ray = [self.pos, self.target.pos]
             blind = False
             for pair in self.game.wall_diagonals:
@@ -213,7 +213,6 @@ class Boss(Mob):
 
     def update(self):
         super().update()
-        self.following_path = False
         self.reset_path += 1
 
         if self.reset_path > 3 * FPS:
@@ -239,11 +238,11 @@ class Boss(Mob):
                 self.path = self.path[1:]
 
         else:
+            self.following_path = False
             super().move()
-            # self.target_dir = self.target_dist.angle_to(vec(1, 0))
-            # self.rot = round(self.target_dir / 45) * 45
 
         for mine in self.game.mines:
+            self.following_path = False
             if (self.pos - mine.pos).length() < BLAST_RADIUS and mine.armed:
                 self.avoid_mines(mine)
 
@@ -360,7 +359,7 @@ class Mine(pg.sprite.Sprite):
                 elif isinstance(hit, Bullet):
                     hit.kill()
                 else:
-                    damage = MOB_HEALTH / (2 * distance / BLAST_RADIUS) ** 2
+                    damage = 2 * MOB_HEALTH * (1 - (distance / BLAST_RADIUS) ** 2)
                     hit.health -= damage
 
         self.last_frame = pg.time.get_ticks()
