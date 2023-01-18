@@ -213,6 +213,7 @@ class Boss(Mob):
 
     def update(self):
         super().update()
+        self.following_path = False
         self.reset_path += 1
 
         if self.reset_path > 3 * FPS:
@@ -226,7 +227,6 @@ class Boss(Mob):
                 self.mines -= 1
 
     def move(self):
-        self.following_path = False
 
         if not len(self.path) == 0:
             self.following_path = True
@@ -260,7 +260,7 @@ class Boss(Mob):
 
         if len(self.path) != 0:
             for point in self.path:
-                if (TILESIZE * vec(point) + vec(TILESIZE/2, TILESIZE/2) - mine.pos).length() <= 0.8*BLAST_RADIUS:
+                if (TILESIZE * vec(point) + vec(TILESIZE/2, TILESIZE/2) - mine.pos).length() <= 0.75*BLAST_RADIUS:
                     self.path.remove(point)
                 else:
                     sink = vec(point) * TILESIZE + vec(TILESIZE / 2, TILESIZE / 2)
@@ -280,7 +280,7 @@ class Boss(Mob):
             F_push += push_magnitude * (r_vec_mine / r_vec_mine.length())
 
         pull_vec = (sink - self.pos)
-        pull = 100 / pull_vec.length() ** 2
+        pull = (30 + 5 * len(walls)) / pull_vec.length() ** 2
         F_pull = pull * pull_vec / pull_vec.length()
 
         F = F_pull + F_push
