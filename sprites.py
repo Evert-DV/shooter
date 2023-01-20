@@ -182,6 +182,14 @@ class Mob(pg.sprite.Sprite):
 
         self.vel = self.vel.rotate((-self.rot))
         self.pos += self.vel * self.game.dt
+        if self.pos.x > self.game.map.width + self.rect.width/2:
+            self.pos.x = -self.rect.width/2
+        if self.pos.x < -self.rect.width/2:
+            self.pos.x = self.game.map.width + self.rect.width/2
+        if self.pos.y > self.game.map.height + self.rect.height/2:
+            self.pos.y = -self.rect.height/2
+        if self.pos.y < -self.rect.height/2:
+            self.pos.y = self.game.map.height + self.rect.height/2
 
         self.hit_rect.centerx = self.pos.x
         collisionx = collide_with_walls(self, self.game.walls, 'x')
@@ -235,7 +243,7 @@ class Boss(Mob):
             self.find_path()
 
         if self.mines > 0 and self.following_path:
-            lay_mine = randrange(0, 500)
+            lay_mine = randrange(0, 300)
             if lay_mine == 1:
                 Mine(self.game, self, self.pos.x, self.pos.y)
                 self.mines -= 1
@@ -363,10 +371,16 @@ class Mine(pg.sprite.Sprite):
         self.sprite.mines += 1
         self.detonated = True
         for hit in self.game.all_sprites:
-            if isinstance(hit, Wall) or hit == self:
+            if hit == self:
                 continue
 
             distance = (self.pos - hit.pos).length()
+
+            if isinstance(hit, Wall):
+                if distance <= BLAST_RADIUS / 2:
+                    hit.kill()
+                continue
+
             if distance <= BLAST_RADIUS:
                 if isinstance(hit, Mine):
                     if not hit.detonated:
