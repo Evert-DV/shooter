@@ -257,7 +257,7 @@ class Boss(Mob):
             direction = direction.angle_to(vec(1, 0))
             self.rot = round(direction / 45) * 45
 
-            if (point - self.pos).length_squared() < (0.25 * TILESIZE) ** 2:
+            if (point - self.pos).length() < (0.33 * self.rect.width):
                 self.path = self.path[1:]
 
         else:
@@ -355,7 +355,11 @@ class Mine(pg.sprite.Sprite):
 
             hits = pg.sprite.spritecollide(self, self.game.all_sprites, False)
             if len(hits) > 1:
-                self.boom()
+                if True in [isinstance(hit, Wall) for hit in hits]:
+                    self.kill()
+                    self.sprite.mines += 1
+                else:
+                    self.boom()
 
         self.rect = self.image.get_rect()
         self.rect.center = self.pos
